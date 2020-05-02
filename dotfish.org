@@ -1,0 +1,22 @@
+
+#+title: fish config file
+#+startup: hideblocks
+#+PROPERTY:    header-args:fish  :tangle ~/.config/fish/config.fish
+
+选择默认的 ruby 版本
+#+begin_src fish
+  rvm default
+#+end_src
+
+代理设置
+#+begin_src fish
+  set -x http_proxy "http://127.0.0.1:8081"
+  set -x https_proxy "http://127.0.0.1:8081"
+#+end_src
+
+解决 ansi-term 提示符(prompt)的问题 [[https://github.com/fish-shell/fish-shell/issues/107][1]]
+#+begin_src fish
+  function fish_title
+    true
+  end
+#+end_src

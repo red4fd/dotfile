@@ -1,0 +1,15 @@
+# -*- mode: snippet -*-
+# name: h5
+# key: h5
+# expand-env: ((yas-indent-line 'auto))
+# --
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>$1</title>
+</head>
+<body>
+$0
+</body>
+</html>

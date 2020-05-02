@@ -1,0 +1,14 @@
+
+#+title: xdg 命令集合
+#+author: red
+#+startup: hideblocks
+
+* xdg-settings
+查看默认的浏览器
+#+begin_src sh
+  xdg-settings get default-web-browser
+#+end_src
+设置默认的浏览器, =browser= 为文件名，位于在 =/usr/share/applications= 中
+#+begin_src sh
+  xdg-settings set default-web-browser <browser>
+#+end_src

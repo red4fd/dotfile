@@ -1,0 +1,39 @@
+
+#+title: dotlinux
+#+description: 这个项目用来记录linux软件的配置,linux命令的个人学习笔记,
+#+STARTUP: hideblocks
+
+* dotemacs
+** windows emacs install
+[[https://github.com/m-parashar/emax64][link to install emacs]]
+
+** emacs init
+hit `C-c C-c' on block
+#+begin_src elisp
+  (unless (file-exists-p "~/.emacs.d")
+    (dired-create-directory "~/.emacs.d"))
+
+  (unless (file-exists-p "~/.emacs.d/init.el")
+    (copy-file "./init.el" "~/.emacs.d/init.el"))
+
+  (when (not (equal system-type 'windows-nt))
+   (unless (file-exists-p
+	    (expand-file-name "DejaVu Sans Mono Nerd Font Complete Mono.ttf" "~/.local/share/fonts"))
+     (copy-file "./DejaVu Sans Mono Nerd Font Complete Mono.ttf"
+	       "~/.local/share/fonts")))
+#+end_src
+
+#+RESULTS:
+
+** emacs run file [[./dotEmacs.org][入口]]
+
+* dotfish
+** [[./dotfish.org][fish run command]]
+* dotcommand
+** [[./dotxdg.org][xdg commands]]
+
+* proxy
+** v2ray
+[[https://github.com/ntkernel/lantern]]
+
+** SwitchyOmega

@@ -1,0 +1,1949 @@
+
+#+title: emacs 配置org文件
+#+STARTUP: hideblocks
+#+PROPERTY:    header-args:elisp  :tangle ~/.emacs.d/lisp/dotemacs.el
+# interesting ibuffer straight
+
+* Emacs 基本配置
+** 更好的体验
+*** 设置缓存目录为 ~/.emacs.d/cache
+#+begin_src elisp
+  (defconst temp-dir (format "%s/cache" user-emacs-directory))
+#+end_src
+emacs设置
+#+begin_src elisp
+  (setq confirm-kill-emacs                  'y-or-n-p
+        confirm-nonexistent-file-or-buffer  t
+        save-interprogram-paste-before-kill t
+        mouse-yank-at-point                 t
+        require-final-newline               t
+        visible-bell                        nil
+        ring-bell-function                  'ignore
+        custom-file                         "~/.emacs.d/custom.el"
+        ;; http://ergoemacs.org/emacs/emacs_stop_cursor_enter_prompt.html
+        minibuffer-prompt-properties
+        '(read-only t point-entered minibuffer-avoid-prompt face minibuffer-prompt)
+        cursor-in-non-selected-windows     nil
+        highlight-nonselected-windows      nil
+        exec-path                          (append exec-path '("/usr/local/bin/"))
+        indent-tabs-mode                   nil
+        inhibit-startup-message            t
+        ;; fringes-outside-margins            t
+        x-select-enable-clipboard          t)
+#+end_src
+关闭自动保存与备份,revert
+#+begin_src elisp
+  (setq make-backup-files nil
+        auto-save-default nil)
+  (global-auto-revert-mode 1)
+#+end_src
+frame设置,关闭光标，菜单，工具栏，滚动条
+#+begin_src elisp
+  (blink-cursor-mode -1)
+  (menu-bar-mode     -1)
+  (tool-bar-mode     -1)
+  (scroll-bar-mode   -1)
+#+end_src
+打开成对的显示括号
+#+begin_src elisp
+  (show-paren-mode 1)
+#+end_src
+保存前设置
+#+begin_src elisp
+  (defun red/format-code ()
+    (interactive)
+    (save-excursion
+      (indent-region (point-min) (point-max) nil)))
+
+
+  (add-hook 'before-save-hook 'delete-trailing-whitespace)
+  ;; (add-hook 'before-save-hook 'red/format-code)
+#+end_src
+:note: toggle-truncate-lines 可以转换自动折行 默认不折行
+#+begin_src elisp
+  (setq-default truncate-lines t)
+#+end_src
+
+*** 默认开启全屏
+#+begin_src elisp
+  (setq initial-frame-alist (quote ((fullscreen . maximized))))
+#+end_src
+
+** 编码
+*** unix
+#+begin_src elisp
+  (unless (string-equal system-type "windows-nt")
+    (set-charset-priority 'unicode)
+    (setq locale-coding-system   'utf-8)
+    (set-terminal-coding-system  'utf-8)
+    (set-keyboard-coding-system  'utf-8)
+    (set-selection-coding-system 'utf-8)
+    (prefer-coding-system        'utf-8)
+    (setq default-process-coding-system '(utf-8-unix . utf-8-unix)))
+#+end_src
+
+*** windows
+[[https://www.zhihu.com/question/35148860][中文粘贴乱码解决]]
+[[https://blog.csdn.net/weixin_33961829/article/details/94032759][中文路径识别解决]]
+#+begin_src elisp
+  (when (string-equal system-type "windows-nt")
+    ;; 解决 windows 下粘贴乱码
+    (set-next-selection-coding-system	'utf-16-le)
+    (set-selection-coding-system		'utf-16-le)
+    (set-clipboard-coding-system		'utf-16-le)
+    ;; 解决 windows 下中文路径无法识别
+    (setq file-name-coding-system		'gbk)
+    (prefer-coding-system			'gb18030)
+    (prefer-coding-system			'utf-8))
+#+end_src
+
+** emacs server
+开启emacs server-mode
+#+begin_src elisp
+  (defun pes-run-server ()
+      "start emacs server if it not start"
+    (require 'server)
+    (unless (equal (server-running-p) t)
+      (server-start)))
+
+  (pes-run-server)
+#+end_src
+
+在命令行中运行 emacsclient filename 即可在emacs中快速打开文件，如果使用fish shell 使用以下函数即可在命令行中使用 ec filename 打开文件
+
+** 基本界面
+*** 字体设置
+英文字体设置
+#+begin_src elisp
+  (if (display-graphic-p)
+      (progn
+        (set-face-attribute
+         'default nil :font "Dejavusansmono Nerd Font Mono 15")))
+#+end_src
+中文字体设置 [[http://baohaojun.github.io/perfect-emacs-chinese-font.html][1]] :size 18
+#+begin_src elisp
+  (if (display-graphic-p)
+        (progn
+          (dolist (charset '(kana han symbol cjk-misc bopomofo))
+            (set-fontset-font (frame-parameter nil 'font)
+                              charset
+                              (font-spec :family "WenQuanYi Micro Hei Mono")))))
+
+  ;; Dejavusansmono Nerd Font Mono
+  (setq face-font-rescale-alist '(("WenQuanYi Micro Hei Mono" . 1.1)))
+#+end_src
+将字体设置成为以上的大小，在org表格中显示会出现不对齐的现象，但是整体看起来更和谐一些,如果将中文字体设置为 22，表格中显示会对齐但是，整体上中文字体会过于庞大
+
+*** margins
+#+begin_src elisp
+  (fringe-mode '(1 . 2))
+
+  (defun pes-margin-add ()
+    ""
+    (unless (bound-and-true-p linum-mode)
+      (set-window-margins (car (get-buffer-window-list (current-buffer) nil t)) 5)))
+
+  (pes-margin-add)
+
+  (add-hook 'window-configuration-change-hook
+            #'(lambda ()
+                (unless (or (string-match "company-box" (buffer-name))
+                            (string-match "Ilist" (buffer-name)))
+                  (pes-margin-add))))
+#+end_src
+
+* 包管理
+** ca
+#+begin_src elisp
+  (when (string-equal system-type "windows-nt")
+    (setq windows-emacs-install "d:/emacs/")
+    (setq ssl-trustfiles (list "ssl/cret.pem"
+			       "ssl/openssl.cnf"
+			       "ssl/certs/ca-bundle.crt"
+			       "ssl/certs/ca-bundle.trust.crt"
+			       "etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt"
+			       "etc/pki/ca-trust/extracted/pem/email-ca-bundle.pem"
+			       "etc/pki/ca-trust/extracted/pem/objsign-ca-bundle.pem"
+			       "etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"))
+    (setq gnutls-trustfiles nil)
+    (mapc (lambda (crt)
+	    (add-to-list 'gnutls-trustfiles (concat windows-emacs-install crt)))
+	  ssl-trustfiles))
+#+end_src
+** package manager
+*** COMMENT 设置package的源，这里选择[[https://elpa.emacs-china.org][emacs-china]]的melpa镜像地址
+#+begin_src elisp
+  (package-initialize)
+  (setq package-archives '(("gnu"   . "http://elpa.emacs-china.org/gnu/")
+                           ("melpa" . "http://elpa.emacs-china.org/melpa/")))
+
+  (when (not package-archive-contents)
+    (package-refresh-contents))
+
+  (unless (package-installed-p 'use-package)
+    (package-install 'use-package)
+    (package-refresh-contents))
+  (require 'use-package)
+
+  (setq use-package-always-ensure t)
+#+end_src
+*** 使用 straight [[https://www.ioiox.com/archives/62.html][1]]
+- github...content 无法访问
+  修改 host 文件
+  linux: /etc/host
+  windows: C:\Windows\System32\drivers\etc\hosts
+
+  添加 199.232.4.133 raw.githubusercontent.com
+#+begin_src elisp
+  (defvar bootstrap-version)
+  (let ((bootstrap-file
+	 (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+	(bootstrap-version 5))
+    (unless (file-exists-p bootstrap-file)
+      (with-current-buffer
+	  (url-retrieve-synchronously
+	   "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+	   'silent 'inhibit-cookies)
+	(goto-char (point-max))
+	(eval-print-last-sexp)))
+    (load bootstrap-file nil 'nomessage))
+
+  (straight-use-package 'el-patch)
+
+  (straight-use-package 'use-package)
+
+  (setq straight-vc-git-default-clone-depth 1
+	straight-enable-use-package-integration nil)
+	;; package-enable-at-startup n)
+#+end_src
+
+* 依赖
+** all the icons
+#+begin_src elisp
+  (use-package all-the-icons
+      :straight t)
+#+end_src
+** dash
+#+BEGIN_SRC elisp
+  (use-package dash
+    :straight t)
+#+END_SRC
+* Red's function
+** emacs system
+*** personal emacs system root directory
+#+begin_src elisp :var pesdir=(file-name-directory (buffer-file-name))
+  (setq pes-root-directory pesdir)
+#+end_src
+
+*** add personal lisp directory to =load-path=
+#+begin_src elisp
+  (let ((dir (expand-file-name "lisp" pes-root-directory)))
+    (progn
+      (unless (file-exists-p dir)
+        (dired-create-directory dir))
+      (add-to-list 'load-path dir)))
+#+end_src
+
+** Smart backspace
+#+begin_src elisp
+  (defun pes-smart-backspace (n &optional killflag)
+  ""
+    (interactive "p\nP")
+    (let* ((current (point))
+           (beginning (save-excursion
+                        (beginning-of-line)
+                        (point))))
+      (if (string-match "^[ \t]*\\*?[\t ]*$" (buffer-substring beginning current))
+          (progn
+            (kill-line 0)
+            (delete-char (- n) killflag)
+            (indent-according-to-mode))
+        (delete-char (- n) killflag))))
+
+  (with-eval-after-load 'smartparens
+    (defadvice pes-smart-backspace (before sp-delete-pair-advice activate)
+      (save-match-data
+        (sp-delete-pair (ad-get-arg 0)))))
+#+end_src
+
+** pes doc handler
+#+begin_src elisp
+  (defvar pes-clike-doc-handler-mode nil
+    "`t' : open c-like-doc mode
+  `nil' : don't open c-like-doc mode")
+
+  (defun pes-clike-doc-handler ()
+    (interactive)
+    (when pes-clike-doc-handler-mode
+      (let ((line1-end (point))
+            (line1-start (save-excursion (beginning-of-line) (point))))
+        (when (string-match "^[\t ]*$" (buffer-substring line1-start line1-end))
+          (let ((line0-end (save-excursion (previous-line) (end-of-line) (point)))
+                (line0-start (save-excursion (previous-line) (beginning-of-line) (point)))
+                (line2-end (save-excursion (next-line) (end-of-line) (point)))
+                (line2-start (save-excursion (next-line) (beginning-of-line) (point))))
+            (when (and
+                   (string-match "^[\t ]*/?\\*" (buffer-substring line0-start line0-end))
+                   (string-match "^[\t ]*\\**/?" (buffer-substring line2-start line2-end)))
+              (insert "* ")
+              (indent-according-to-mode)))))))
+
+  (add-hook 'post-self-insert-hook #'pes-clike-doc-handler)
+#+end_src
+
+** pes css handler
+#+begin_src elisp
+  (defvar pes-css-after-ccfh-switch nil
+    "doc string")
+
+  (defconst pes-css-att-line-regex "^[0-9 \ta-zA-Z\\-]*:[0-9 \ta-zA-Z\\-]*$"
+    "css attribute line regular expression after ret")
+
+  (defconst pes-css-newline-regex "^[ \t]*;$"
+    "css new line regex")
+
+  (defun pes-search-get-point (func char-string &optional switch)
+    "use `fun' to search `char-string' ,
+  `func': `search-backward' or `search-forward'
+  return the char-string point if `point' change
+  return nil if `point' not change or search faile"
+    (let* ((point-init (point))
+           (point-char (save-excursion (apply func (list char-string nil t 1))
+                                       (point)))
+           (point-l (if (or (not (equal point-init point-char)) switch) point-char nil)))
+      point-l))
+
+  (defun pes-css-add-end-mark()
+    "add `;' when insert `:' in css mode"
+    (when pes-css-after-ccfh-switch
+      (let* ((line-begin (save-excursion (beginning-of-line) (point)))
+             (line-end (save-excursion (end-of-line) (point)))
+             (delimiter-backward-} (pes-search-get-point #'search-backward "}"))
+             (delimiter-backward-{ (pes-search-get-point #'search-backward "{"))
+             (delimiter-forward-} (pes-search-get-point #'search-forward "}"))
+             (delimiter-forward-{ (pes-search-get-point #'search-forward "{"))
+             (result (cond
+                      ((or
+                        ;; condition 1: { | }
+                        (and (not delimiter-backward-}) (not delimiter-forward-{)
+                             delimiter-backward-{ delimiter-forward-}
+                             (> delimiter-forward-} delimiter-backward-{))
+                        ;; condition 2: } { | }
+                        (and (not delimiter-forward-{)
+                             delimiter-backward-} delimiter-backward-{ delimiter-forward-}
+                             (> delimiter-backward-{ delimiter-backward-})
+                             (> delimiter-forward-} delimiter-backward-{))
+                        ;; condition 3: { | } {
+                        (and (not delimiter-backward-})
+                             delimiter-backward-{ delimiter-forward-} delimiter-forward-{
+                             (> delimiter-forward-} delimiter-backward-{)
+                             (> delimiter-forward-{ delimiter-forward-}))
+                        ;; condition 4: } { | } {
+                        (and delimiter-backward-{ delimiter-backward-}
+                             delimiter-forward-{ delimiter-forward-}
+                             (> delimiter-backward-{ delimiter-backward-})
+                             (> delimiter-forward-} delimiter-backward-{)
+                             (> delimiter-forward-{ delimiter-forward-})))
+                       t)
+                      (t nil))))
+        (when (and result
+                   (string-match pes-css-att-line-regex
+                                 (buffer-substring line-begin line-end)))
+          (insert ";")
+          (backward-char)))))
+
+  (defun pes-css-after-ret ()
+    "start point `:|;'
+  normal after ret `:\n;' in two line;
+  after this function `:;\n'"
+    (when pes-css-after-ccfh-switch
+      ;;bk: back lo:local l: line s:start e:end m:match
+      (let* ((bk-l-s (save-excursion (previous-line) (beginning-of-line) (point)))
+             (bk-l-e (save-excursion (previous-line) (end-of-line) (point)))
+             (lo-l-s (save-excursion (beginning-of-line) (point)))
+             (lo-l-e (save-excursion (end-of-line) (point)))
+             (bk-l-ma (string-match pes-css-att-line-regex
+                                    (buffer-substring bk-l-s bk-l-e)))
+             (lo-l-ma (string-match pes-css-newline-regex
+                                    (buffer-substring lo-l-s lo-l-e))))
+        (when (and bk-l-ma lo-l-ma)
+          (pes-smart-backspace 1)
+          (end-of-line)
+          (newline)
+          (indent-according-to-mode)))))
+
+  (defun pes-css-insert-handler ()
+    ""
+    (interactive)
+    (pes-css-add-end-mark)
+    (pes-css-after-ret))
+
+  (add-hook 'post-self-insert-hook #'pes-css-insert-handler)
+#+end_src
+
+** pes handler config
+#+begin_src elisp
+  (defun pes-add-clike-doc-handler (mode)
+    ""
+    (add-hook mode
+              #'(lambda ()
+                  (set (make-local-variable 'pes-clike-doc-handler-mode) t))))
+
+  (with-eval-after-load 'cc-mode
+    (pes-add-clike-doc-handler 'c-mode-hook))
+
+  (with-eval-after-load 'css-mode
+    (pes-add-clike-doc-handler 'css-mode-hook))
+
+  (with-eval-after-load 'js
+    (pes-add-clike-doc-handler 'js-mode-hook))
+
+
+#+end_src
+
+** pes mode line icon
+#+BEGIN_SRC elisp
+  ;; (mapc #'(lambda (x)
+  ;;           (message x))
+  ;;       load-path)
+  ;; (require 'dash nil t)
+
+  (defvar pes-mode-line-icon-atts
+    '((emacs-lisp-mode . (:height .7 :v-adjust .01))
+      (lisp-interaction-mode . (:height .8))
+      (c-mode . (:height .9 :v-adjust .02))
+      (js-mode . (:height .9 :v-adjust .02))
+      (web-mode . (:height .9 :v-adjust .02))
+      (css-mode . (:height .9 :v-adjust .02))
+      (ruby-mode . (:height .9))
+      (org-mode . (:height .8 :v-adjust .01))
+      (special-mode . (:height 0.8 :v-adjust .01))
+      (help-mode . (:height 0.9 :v-adjust 0.1))
+      (messages-buffer-mode . (:height 0.7 :v-adjust .01))
+      (inferior-emacs-lisp-mode . (:height .9 :v-adjust .01))))
+
+  (defvar pes-mode-line-icon-ignore
+    '(help-mode messages-buffer-mode Custom-mode org-agenda-mode ibuffer-mode dired-mode))
+
+  (defun pes-mode-line-icon-get-attrs-by-mode ()
+    (let* ((mode major-mode))
+      (cdr (assoc mode pes-mode-line-icon-atts))))
+
+  (defun pes-mode-line-icon-ignore-p ()
+    (let ((sta (member major-mode pes-mode-line-icon-ignore)))
+      (if sta
+          t
+        nil)))
+
+  ;; (defun pes-mode-line-icon-get-icon ()
+  ;;   (if (not (pes-mode-line-icon-ignore-p))
+  ;;       (let* ((attributes (pes-mode-line-icon-get-attrs-by-mode))
+  ;;              (attributes-f (cons (file-name-nondirectory (buffer-name))
+  ;;                                  attributes))
+  ;;              (attributes-m (cons major-mode attributes)))
+  ;;         (if (and (buffer-file-name)
+  ;;                  (all-the-icons-auto-mode-match?))
+  ;;             (apply #'all-the-icons-icon-for-file
+  ;;                    attributes-f)
+  ;;           (apply #'all-the-icons-icon-for-mode
+  ;;                  attributes-m)))
+  ;;     (format "")))
+
+  (defun pes-mode-line-icon-get-icon ()
+    (if (not (pes-mode-line-icon-ignore-p))
+        (let* ((attributes (pes-mode-line-icon-get-attrs-by-mode))
+               (attributes-m (cons major-mode attributes)))
+          (apply #'all-the-icons-icon-for-mode
+                 attributes-m))
+      (format "")))
+#+END_SRC
+** COMMENT Smart enter
+作用于 c-like 代码中的函数
+对成对的大括号，回车后自动增加新的一行并且缩进
+#+begin_src elisp
+
+  (defun pes-char-to-string (ch)
+    (when (not (null ch))
+      (char-to-string ch)))
+
+  (defun pes-smart-enter (&optional arg interactive)
+    (interactive "*P\np")
+    (let ((point-b (pes-char-to-string (char-before (point))))
+          (point-a (pes-char-to-string (char-after (point)))))
+      (newline arg interactive)
+      ;; (indent-according-to-mode)
+      (when (and (string-equal point-b "{")
+                 (string-equal point-a "}"))
+        (search-backward "{")
+        (end-of-line)
+        (newline arg interactive)
+        (indent-according-to-mode)
+        )))
+#+end_src
+
+* 视觉效果
+** 主题设置
+#+begin_src elisp
+  (use-package zenburn-theme
+    :straight t
+    :config
+    ;;(setq zenburn-use-variable-pitch t)
+    (setq zenburn-scale-org-headlines t)
+    (setq zenburn-scale-outline-headlines t)
+    (load-theme 'zenburn t))
+#+end_src
+
+** mode line
+#+begin_src elisp
+  (defvar pes-test nil)
+
+  (use-package mini-modeline
+    :straight t
+    :preface
+    (defface pes-mini-hide-modeline-line
+      '((((background light))
+         :backgorund "#D3D3D3" :height 0.1 :box nil)
+        (t
+         :backgorund "#D3D3D3" :height 0.1 :box nil))
+      "Modeline face for inactive window.")
+    :custom-face
+    (mini-modeline-mode-line ((t (:inherit 'pes-mini-hide-modeline-line))))
+    (mini-modeline-mode-line-inactive ((t (:inherit 'pes-mini-hide-modeline-line))))
+    :config
+    (setq-default mini-modeline-right-padding 0.1)
+    (setq-default mini-modeline-r-format
+                  (list "%e"
+                        mode-line-frame-identification
+                        ;; mode-line-buffer-identification
+                        ;; mode-line-icon
+                        '(:eval (propertize (pes-mode-line-icon-get-icon)))
+                                ;; buffer-name
+                        '(:eval (propertize "%b" 'face '((:foreground "#F09027" :weight bold))))
+                        "  "
+                        ;;mode-line-position
+                        ;; ((:propertize mode-line-percent-position )
+                        ;;  (line-number-mode))
+                        (propertize "%p" 'face '((:foreground "#EA9085")))
+                        " "
+                        (propertize "%l" 'face 'font-lock-type-face)
+
+                        '(vc-mode vc-mode)
+
+                        '(:eval (let* ((sum 0)
+                                       (sum (if (buffer-modified-p) (+ sum 1) sum))
+                                       (sum (if buffer-read-only (+ sum 2) sum))
+                                       (bms (propertize "Mod"
+                                                        'face '((:inherit font-lock-warning-face
+                                                                          :box (:line-width -1 :style released-button)))))
+                                       (brs (propertize "RO"
+                                                        'face '((:inherit font-lock-type-face
+                                                                          :box (:line-width 1 :style pressed-button))))))
+                                  (setq pes-test (cons sum bms))
+                                  (cond
+                                   ((= sum 1) (concat "  [" bms "]"))
+                                   ((= sum 2) (concat "  [" brs "]"))
+                                   ((= sum 3) (concat "  [" bms "," brs "]"))
+                                   (t " "))))
+                        ;; mode-line-misc-info
+                        " "
+                        ))
+    (setq mini-modeline-enhance-visual nil
+          mini-modeline-echo-duration 2
+          mini-modeline-update-interval 0.3)
+    (mini-modeline-mode t))
+
+  ;; (defface pes-mini-hide-modeline-line
+  ;;   '((t :inherit default :height 0.15 :box nil))
+  ;;   "Modeline face for inactive window.")
+
+
+
+  ;; (when (display-graphic-p)
+  ;;   (setf (alist-get 'mode-line face-remapping-alist)
+  ;;         'pes-mini-hide-modeline-line)
+  ;;   (setf (alist-get 'mode-line-inactive face-remapping-alist)
+  ;;         'pes-mini-hide-modeline-line))
+
+  ;; (custom-set-faces
+  ;;  '(mini-modeline-mode-line ((t (:inherit 'pes-mini-hide-modeline-line))))
+  ;;  '(mini-modeline-mode-line-inactive ((t (:inherit 'pes-mini-hide-modeline-line)))))
+#+end_src
+
+** dimmer
+#+begin_src elisp
+  (use-package dimmer
+    :straight t
+    :config
+    (dimmer-configure-which-key)
+    (dimmer-configure-posframe)
+    (dimmer-configure-org)
+    (dimmer-configure-magit)
+    (setq dimmer-fraction 0.5)
+    (dimmer-mode t))
+#+end_src
+
+* 全局 packages 配置
+*** 快捷键
+| keyboard | command                  |
+|----------+--------------------------|
+| C-c g    | avy-goto-word-1          |
+
+| C-=      | expand refion            |
+
+| C-M-j    | output just you input    |
+
+| C-c C-s  | mc/edit-line             |
+| C->      | mc/mark-next-like-this   |
+| C->      | mc/previous-like-this    |
+| C-c C->  | mc/mark-all-like-this    |
+| C-q C-l  | page line                |
+** avy
+在org-mode 中有冲突
+#+begin_src elisp
+  (use-package avy
+    :straight t
+    :bind
+    ("C-c g" . avy-goto-word-1))
+#+end_src
+
+** expand-refion
+#+BEGIN_SRC elisp
+  (use-package expand-region
+    :straight t
+    :bind
+    ("C-=" . er/expand-region))
+#+END_SRC
+
+** multiple-cursors
+在org-mode 中有冲突
+#+BEGIN_SRC elisp
+  (use-package multiple-cursors
+    :straight t
+    :bind
+    ("C-c C-s" . mc/edit-lines)
+    ("C->" . mc/mark-next-like-this)
+    ("C-<" . mc/mark-previous-like-this)
+    ("C-c C->" . mc/mark-all-like-this))
+#+END_SRC
+
+** package-break-lines
+在help文档中看起来还不错
+#+BEGIN_SRC elisp
+  (use-package page-break-lines
+    :straight t
+    :config
+    (global-page-break-lines-mode))
+#+END_SRC
+
+
+** recentf
+#+BEGIN_SRC elisp
+  (use-package recentf
+    :straight t
+    :config
+    (setq recentf-save-file (recentf-expand-file-name "~/.emacs.d/private/cache/recentf"))
+    (recentf-mode 1))
+#+END_SRC
+
+** undo-tree
+#+BEGIN_SRC elisp
+  (use-package undo-tree
+    :straight t
+    :config
+    ;; Remember undo history
+    (setq
+     undo-tree-auto-save-history nil
+     undo-tree-history-directory-alist `(("." . ,(concat temp-dir "/undo/"))))
+    (global-undo-tree-mode 1))
+#+END_SRC
+
+** comment-dwim-2
+|-----+----------------|
+| =M-;= | toggle comment |
+|-----+----------------|
+#+BEGIN_SRC elisp
+  (use-package comment-dwim-2
+    :straight t
+    :config
+    (global-set-key (kbd "M-;") 'comment-dwim-2)
+    (setq cd2/region-command 'cd2/comment-or-uncomment-region)
+    (setq comment-style 'multi-line))
+#+END_SRC
+
+** color-identifiers-mode
+#+begin_src elisp
+  (use-package color-identifiers-mode
+    :straight t
+    :config
+    (add-hook 'after-init-hook #'color-identifiers-mode))
+#+end_src
+
+** youdao
+#+begin_src elisp
+  (use-package youdao-dictionary
+    :straight t
+    :config
+    (global-set-key (kbd "C-c y") 'youdao-dictionary-search-at-point-tooltip))
+#+end_src
+
+** writeroom-mode
+#+begin_src elisp
+  (use-package writeroom-mode
+    :straight t)
+#+end_src
+
+** smartparens
+#+BEGIN_SRC elisp
+  (use-package smartparens
+    :straight t
+    :config
+    (smartparens-global-mode t)
+    (require 'smartparens-config))
+
+  (sp-with-modes '(js-mode css-mode c-mode c++-mode)
+    (sp-local-pair "{" nil :post-handlers '(("||\n[i]" "RET")))
+    (sp-local-pair "/**" "*/" :post-handlers '((" | " "SPC")
+                                               ("||[i]\n[i]" "RET"))))
+#+END_SRC
+
+** beacon
+#+begin_src elisp
+  (use-package beacon
+    :straight t
+    :init
+    (setq beacon-color "#663333")
+    :config
+    (beacon-mode 1))
+#+end_src
+** imenu
+#+begin_src elisp
+  (use-package imenu-list
+    :straight t
+    :bind (("C-'" . imenu-list-smart-toggle))
+    :config (setq imenu-list-auto-resize t
+                  imenu-list-focus-after-activation t
+                  imenu-list-after-jump-hook nil
+                  imenu-list-focus-after-activation t))
+#+end_src
+** rainbow delimiter
+#+begin_src elisp
+  (use-package rainbow-delimiters
+    :straight t
+    :hook (emacs-lisp-mode . rainbow-delimiters-mode))
+#+end_src
+
+** ibuffer
+#+begin_src elisp
+  (use-package ibuffer
+    :bind
+    ("C-x C-b" . ibuffer)
+    :config
+    (setq ibuffer-saved-filter-groups
+          '(("default"
+             ("js" (mode . js-mode))
+             ("html" (or (mode . web-mode)
+                         (mode . html-mode)))
+             ("css" (or (mode . css-mode)
+                        (mode . scss-mode)))
+             ("conf" (filename . "dotfile"))
+             ("package" (filename . "elpa"))
+             ("draft" (name . "\*scratch\*")))))
+    (add-hook 'ibuffer-mode-hook
+              #'(lambda ()
+                  (ibuffer-auto-mode 1)
+                  (ibuffer-switch-to-saved-filter-groups "default")))
+    (setq ibuffer-show-empty-filter-groups nil)
+    (setq ibuffer-expert t))
+#+end_src
+
+* 结构管理
+** ivy [[https://ladicle.com/post/config/#ivy][1]]
+#+BEGIN_SRC elisp
+  (use-package ivy
+    :straight t
+    :bind
+    (("C-x s" . swiper)
+     ("C-x C-r" . ivy-resume)
+     :map read-expression-map
+     ("C-r" . counsel-expression-history))
+    :preface
+    (defface ivy-current-match-c
+      `((((class color) (background light))
+         :extend t :height 200 :box (:line-width -1 :style released-button))
+        (((class color) (background dark))
+         :extend t :height 200 :box (:line-width -1 :style released-button)))
+      "Face used by Ivy for highlighting the current match.")
+
+    (defun ivy-format-function-pretty (cands)
+      "Transform CANDS into a string for minibuffer."
+      (ivy--format-function-generic
+       (lambda (str)
+         (concat
+          "->"
+          " "
+          (ivy--add-face str 'ivy-current-match-c)))
+       (lambda (str)
+         (concat "    " str))
+       cands
+       "\n"))
+    :config
+    (ivy-mode 1)
+    ;;  (setq ivy-use-virtual-buffers t)
+    (define-key read-expression-map (kbd "C-r") 'counsel-expression-history)
+    (setq ivy-count-format "")
+    (setq ivy-format-functions-alist '((t . ivy-format-function-pretty))))
+#+END_SRC
+
+** ivy-posframe
+#+begin_src elisp
+  (use-package ivy-posframe
+    :straight t
+    :config
+    (setq ivy-posframe-display-functions-alist
+          '((swiper          . nil)
+            (complete-symbol . ivy-posframe-display-at-point)
+            (counsel-M-x     . ivy-posframe-display-at-frame-center)
+            (t               . ivy-posframe-display-at-frame-center)
+            (counsel-ag      . nil)))
+    (ivy-posframe-mode 1))
+#+end_src
+
+** smex
+#+BEGIN_SRC elisp
+  (use-package smex
+    :straight t)
+#+END_SRC
+
+** which-key
+#+BEGIN_SRC elisp
+  (use-package which-key
+    :straight t
+    :config
+    (which-key-mode))
+#+END_SRC
+
+** counsel
+#+BEGIN_SRC elisp
+  (use-package counsel
+    :straight t
+    :bind
+    (("M-x" . counsel-M-x)
+     ("C-x C-f" . counsel-find-file)
+     ("C-x c k" . counsel-yank-pop)
+     ("C-x c r" . counsel-recentf)))
+#+END_SRC
+if you want use =counsel-ag=,you need to install it in your computer
+#+begin_src sh :dir "/sudo::"
+  sudo pacman -S the_silver_searcher
+#+end_src
+
+** dired +
+#+BEGIN_SRC elisp
+  (use-package dired+
+    :straight (:host github :repo "emacsmirror/dired-plus"))
+#+END_SRC
+
+* 项目管理
+*** 快捷键
+| C-x g p  | magit-push               |
+| C-x g x  | magit-checkout           |
+| C-x g s  | magit-status             |
+| C-x g u  | magit-pull               |
+| C-x g e  | magit-ediff              |
+| C-x g r  | magit-rebase-interactive |
+** magit,magit-popup
+#+BEGIN_SRC elisp
+  (use-package magit
+    :straight t
+    :config
+    (setq magit-completing-read-function 'ivy-completing-read)
+    :bind
+    ;; Magic
+    ("C-x g s" . magit-status)
+    ("C-x g x" . magit-checkout)
+    ("C-x g c" . magit-commit)
+    ("C-x g p" . magit-push)
+    ("C-x g u" . magit-pull)
+    ("C-x g e" . magit-ediff-resolve)
+    ("C-x g r" . magit-rebase-interactive))
+
+  (use-package magit-popup
+    :straight t)
+#+END_SRC
+
+** projectile
+#+BEGIN_SRC elisp
+  (use-package projectile
+    :straight t
+    :config
+    (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+    (setq projectile-completion-system 'ivy)
+    (projectile-mode +1))
+#+END_SRC
+
+** counsel-projectile
+#+BEGIN_SRC elisp
+  (use-package counsel-projectile
+    :straight t
+    :config
+    (counsel-projectile-mode))
+#+END_SRC
+
+* 个性化全局包
+** linum 行号显示
+#+begin_src elisp
+  (use-package hlinum
+    :straight t
+    :config
+    (hlinum-activate))
+
+  (use-package linum
+    :straight t
+    :config
+    (setq linum-format " %3d "))
+#+end_src
+
+** fill-column-indicator
+#+begin_src elisp
+  (use-package fill-column-indicator
+    :straight t)
+#+end_src
+*** emacs lisp
+#+begin_src elisp
+  (add-hook 'emacs-lisp-mode-hook
+            (lambda ()
+              (set (make-local-variable 'fci-rule-column) 80)
+              (fci-mode)))
+#+end_src
+
+** lsp
+*** lsp mode
+#+begin_src elisp
+  (use-package lsp-mode
+    :straight t
+    :hook ((ruby-mode . lsp-deferred)
+           (lsp-mode . lsp-enable-which-key-integration))
+           ;; (js-mode . lsp-deferred))
+    :commands (lsp lsp-deferred)
+    :bind (:map lsp-mode-map
+                ("C-S-SPC" . set-mark-command))
+    :init
+    (setq lsp-keymap-prefix "C-x e")
+    (setq read-process-output-max (* 1024 1024))
+    (setq lsp-auto-guess-root nil      ; Detect project root
+          lsp-keep-workspace-alive nil ; Auto-kill LSP server
+          lsp-enable-indentation nil
+          lsp-enable-on-type-formatting nil
+          lsp-prefer-capf t))
+
+  ;; (use-package lsp-ui
+  ;;   :commands lsp-ui-mode
+  ;;   :config
+  ;;   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
+  ;;   (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references))
+#+end_src
+
+*** ccls
+#+begin_src elisp
+  (use-package ccls
+    :straight t
+    :hook ((c-mode c++-mode objc-mode cuda-mode) .
+           (lambda ()
+             (require 'ccls)
+             (lsp))))
+
+  (setq ccls-executable "d:/ccls/ccls/Release/ccls.exe")
+
+  (setq ccls-initialization-options '(:index (:comments 2) :completion (:detailedLabel t)))
+
+  (setq ccls-sem-highlight-method 'font-lock)
+  ;; alternatively, (setq ccls-sem-highlight-method 'overlay)
+
+  ;; For rainbow semantic highlighting
+  (ccls-use-default-rainbow-sem-highlight)
+
+  (face-spec-set 'ccls-sem-member-face
+                 '((t :slant normal))
+                 'face-defface-spec)
+#+end_src
+
+** company
+#+BEGIN_SRC elisp
+  (use-package company
+    :straight t
+    :bind
+    (:map company-active-map
+          ("C-n" . company-select-next)
+          ("C-p" . company-select-previous))
+    :hook
+    (after-init . global-company-mode)
+    :config
+    (setq company-idle-delay            0.01
+          company-minimum-prefix-length 2))
+
+  (with-eval-after-load 'org
+    (add-hook 'org-mode-hook #'(lambda ()
+                                 (company-mode -1))))
+#+END_SRC
+*** comapny backend
+**** base company backends
+#+begin_src elisp
+  (require 'company-files)
+  (require 'company-keywords)
+  (require 'company-clang)
+#+end_src
+
+**** company lsp
+#+begin_src elisp
+  (use-package company-lsp
+    :straight t
+    :requires company
+    :commands company-lsp
+    :config
+    (setq company-lsp-async t)
+    (add-to-list 'company-lsp-filter-candidates '(gopls . nil)))
+
+  (setq lsp-prefer-capf t)
+#+end_src
+
+**** COMMENT company-yas
+Enable yasnippet for all backends
+#+begin_src elisp
+  (defvar company-mode/enable-yas t "Enable yasnippet for all backends.")
+#+end_src
+add yasnippet backend to yasnippet
+#+begin_src elisp
+  (defun company-mode/backend-with-yas (backend)
+    (if (or (not company-mode/enable-yas) (and (listp backend)    (member 'company-yasnippet backend)))
+        backend
+      (append (if (consp backend) backend (list backend))
+          '(:with company-yasnippet))))
+
+  ;; (setq company-backends (mapcar #'company-mode/backend-with-yas company-backends))
+#+end_src
+
+*** company frontend
+**** COMMENT company box
+此包有太多bug,仅收藏待观察 参考 [[https://github.com/seagle0128/.emacs.d/blob/master/lisp/init-company.el#L76][1]]
+#+begin_src elisp
+  ;; (use-package company-box
+  ;;   :config
+  ;;   (require 'subr-x)
+  ;;   (add-hook 'emacs-lisp-mode-hook #'company-box-mode)
+  ;;   (setq company-box-backends-colors nil
+  ;;         company-box-max-candidates 50
+  ;;         company-box-icons-yasnippet (all-the-icons-material "short_text" :height 0.8 :face 'all-the-icons-green)
+  ;;         company-box-icons-unknown (all-the-icons-material "find_in_page" :height 0.8 :face 'all-the-icons-purple)
+  ;;         company-box-icons-elisp
+  ;;         (list (all-the-icons-material "functions"                  :height 0.8 :face 'all-the-icons-red)
+  ;;               (all-the-icons-material "check_circle"               :height 0.8 :face 'all-the-icons-blue))))
+  (use-package all-the-icons
+     )
+
+  (setq centaur-icon t)
+  (require 'subr-x)
+
+  (use-package company-box
+
+    :hook (company-mode . company-box-mode)
+    :init (setq company-box-enable-icon t
+                company-box-backends-colors nil
+                company-box-show-single-candidate t
+                company-box-max-candidates 50
+                company-box-doc-delay 0.5)
+    :config
+    (defun icons-displayable-p ()
+    "Return non-nil if `all-the-icons' is displayable."
+    (and centaur-icon
+         (display-graphic-p)
+         (require 'all-the-icons nil t)))
+
+    ;; Highlight `company-common'
+    (defun my-company-box--make-line (candidate)
+      (-let* (((candidate annotation len-c len-a backend) candidate)
+              (color (company-box--get-color backend))
+              ((c-color a-color i-color s-color) (company-box--resolve-colors color))
+              (icon-string (and company-box--with-icons-p (company-box--add-icon candidate)))
+              (candidate-string (concat (propertize (or company-common "") 'face 'company-tooltip-common)
+                                        (substring (propertize candidate 'face 'company-box-candidate)
+                                                   (length company-common) nil)))
+              (align-string (when annotation
+                              (concat " " (and company-tooltip-align-annotations
+                                               (propertize " " 'display `(space :align-to (- right-fringe ,(or len-a 0) 1)))))))
+              (space company-box--space)
+              (icon-p company-box-enable-icon)
+              (annotation-string (and annotation (propertize annotation 'face 'company-box-annotation)))
+              (line (concat (unless (or (and (= space 2) icon-p) (= space 0))
+                              (propertize " " 'display `(space :width ,(if (or (= space 1) (not icon-p)) 1 0.75))))
+                            (company-box--apply-color icon-string i-color)
+                            (company-box--apply-color candidate-string c-color)
+                            align-string
+                            (company-box--apply-color annotation-string a-color)))
+              (len (length line)))
+        (add-text-properties 0 len (list 'company-box--len (+ len-c len-a)
+                                         'company-box--color s-color)
+                             line)
+        line))
+    (advice-add #'company-box--make-line :override #'my-company-box--make-line)
+
+    ;; Prettify icons
+    (defun my-company-box-icons--elisp (candidate)
+      (when (derived-mode-p 'emacs-lisp-mode)
+        (let ((sym (intern candidate)))
+          (cond ((fboundp sym) 'Function)
+                ((featurep sym) 'Module)
+                ((facep sym) 'Color)
+                ((boundp sym) 'Variable)
+                ((symbolp sym) 'Text)
+                (t . nil)))))
+    (advice-add #'company-box-icons--elisp :override #'my-company-box-icons--elisp)
+
+    (when (icons-displayable-p)
+      (declare-function all-the-icons-faicon 'all-the-icons)
+      (declare-function all-the-icons-material 'all-the-icons)
+      (declare-function all-the-icons-octicon 'all-the-icons)
+      (setq company-box-icons-all-the-icons
+            `((Unknown . ,(all-the-icons-material "find_in_page" :height 0.85 :v-adjust -0.2))
+              (Text . ,(all-the-icons-faicon "text-width" :height 0.8 :v-adjust -0.05))
+              (Method . ,(all-the-icons-faicon "cube" :height 0.8 :v-adjust -0.05 :face 'all-the-icons-purple))
+              (Function . ,(all-the-icons-faicon "cube" :height 0.8 :v-adjust -0.05 :face 'all-the-icons-purple))
+              (Constructor . ,(all-the-icons-faicon "cube" :height 0.8 :v-adjust -0.05 :face 'all-the-icons-purple))
+              (Field . ,(all-the-icons-octicon "tag" :height 0.8 :v-adjust 0 :face 'all-the-icons-lblue))
+              (Variable . ,(all-the-icons-octicon "tag" :height 0.8 :v-adjust 0 :face 'all-the-icons-lblue))
+              (Class . ,(all-the-icons-material "settings_input_component" :height 0.85 :v-adjust -0.2 :face 'all-the-icons-orange))
+              (Interface . ,(all-the-icons-material "share" :height 0.85 :v-adjust -0.2 :face 'all-the-icons-lblue))
+              (Module . ,(all-the-icons-material "view_module" :height 0.85 :v-adjust -0.2 :face 'all-the-icons-lblue))
+              (Property . ,(all-the-icons-faicon "wrench" :height 0.8 :v-adjust -0.05))
+              (Unit . ,(all-the-icons-material "settings_system_daydream" :height 0.85 :v-adjust -0.2))
+              (Value . ,(all-the-icons-material "format_align_right" :height 0.85 :v-adjust -0.2 :face 'all-the-icons-lblue))
+              (Enum . ,(all-the-icons-material "storage" :height 0.85 :v-adjust -0.2 :face 'all-the-icons-orange))
+              (Keyword . ,(all-the-icons-material "filter_center_focus" :height 0.85 :v-adjust -0.2))
+              (Snippet . ,(all-the-icons-material "format_align_center" :height 0.85 :v-adjust -0.2))
+              (Color . ,(all-the-icons-material "palette" :height 0.85 :v-adjust -0.2))
+              (File . ,(all-the-icons-faicon "file-o" :height 0.85 :v-adjust -0.05))
+              (Reference . ,(all-the-icons-material "collections_bookmark" :height 0.85 :v-adjust -0.2))
+              (Folder . ,(all-the-icons-faicon "folder-open" :height 0.85 :v-adjust -0.05))
+              (EnumMember . ,(all-the-icons-material "format_align_right" :height 0.85 :v-adjust -0.2 :face 'all-the-icons-lblue))
+              (Constant . ,(all-the-icons-faicon "square-o" :height 0.85 :v-adjust -0.1))
+              (Struct . ,(all-the-icons-material "settings_input_component" :height 0.85 :v-adjust -0.2 :face 'all-the-icons-orange))
+              (Event . ,(all-the-icons-octicon "zap" :height 0.8 :v-adjust 0 :face 'all-the-icons-orange))
+              (Operator . ,(all-the-icons-material "control_point" :height 0.85 :v-adjust -0.2))
+              (TypeParameter . ,(all-the-icons-faicon "arrows" :height 0.8 :v-adjust -0.05))
+              (Template . ,(all-the-icons-material "format_align_left" :height 0.85 :v-adjust -0.2)))
+            company-box-icons-alist 'company-box-icons-all-the-icons)))
+
+  ;; (set-window- "company-box-frame" 0)
+
+  ;; (set-window-margins WINDOW LEFT-WIDTH &optional RIGHT-WIDTH)
+#+end_src
+
+**** COMMENT company posframe
+gnome 插件的 bug 原因暂时放弃
+#+begin_src elisp
+  (use-package company-posframe
+    :diminish
+
+    :hook
+    (company-mode . company-posframe-mode)
+    ;; :config
+    ;; (use-package desktop
+    ;;   :config
+    ;;   (push '(company-posframe-mode . nil)
+    ;;        desktop-minor-mode-table))
+    )
+#+end_src
+
+**** COMMENT company quickhelp
+如果使用 company box 讲次包关闭
+#+begin_src elisp
+  (use-package company-quickhelp
+
+    :hook (company-mode . company-quickhelp-mode)
+    :config
+    (setq company-quickhelp-max-lines 20))
+#+end_src
+
+*** major mode backend
+**** elisp backends
+#+begin_src elisp
+  (add-hook 'emacs-lisp-mode-hook
+            (lambda ()
+              (set (make-local-variable 'company-backends)
+                   '(company-elisp company-files (company-keywords company-dabbrev-code)))))
+#+end_src
+
+**** cc-mode backends
+#+begin_src elisp
+  (add-hook 'c-mode-hook
+            (lambda ()
+              (set (make-local-variable 'company-backends)
+                   '(company-clang comapny-files (company-keywords company-dabbrev-code)))
+              (use-package company-c-headers
+                :straight t
+                :config
+                (add-to-list 'company-backends 'company-c-headers))))
+#+end_src
+
+**** ruby-mode backends
+#+begin_src elisp
+  (add-hook 'ruby-mode-hook
+            (lambda ()
+              (set (make-local-variable 'company-backends)
+                   '(company-capf company-keywods company-files))
+              (push 'company-lsp company-backends)))
+#+end_src
+
+**** web-mode backends
+#+begin_src elisp
+  (require 'company-css)
+  (use-package company-web
+    :straight t)
+
+  (add-hook 'web-mode-hook
+            (lambda ()
+              (set (make-local-variable 'company-backends)
+                   '((company-css :with company-yasnippet) (company-web-html :with company-yasnippet) company-files company-dabbrev-code))))
+
+
+  (add-hook 'css-mode-hook
+            (lambda ()
+              (set (make-local-variable 'company-backends)
+                   '(company-css company-dabbrev-code))))
+#+end_src
+
+**** cmake-mode backends
+#+begin_src elisp
+  (require 'company-cmake)
+  (add-hook 'cmake-mode-hook
+            (lambda ()
+              (set (make-local-variable 'company-backends)
+                   '(company-cmake company-files company-yasnippet))))
+#+end_src
+
+**** js-mode backends
+#+begin_src elisp
+  ;; (use-package tide
+  ;;   :after (company js)
+  ;;   :config
+    (add-hook 'js-mode-hook #'(lambda()
+                                (set (make-local-variable 'company-backends)
+                                     '(company-tide (company-files :width company-yasnippet) (company-keywords company-dabbrev-code)))
+
+                                (setq comment-start "/*"
+                                      comment-end "*/")))
+#+end_src
+
+** yasnippet
+#+BEGIN_SRC elisp
+  (use-package yasnippet
+    :straight t
+    :config
+    (setq yas-snippet-dirs (cons (concat pes-root-directory "snippets") nil))
+    (yas-global-mode 1)
+    ;; (use-package yasnippet-snippets)
+    )
+#+END_SRC
+*** COMMENT company for yasnippet
+look [[https://www.reddit.com/r/emacs/comments/3r9fic/best_practicestip_for_companymode_andor_yasnippet/][here]] for idea
+
+Enable yasnippet for all backends
+#+begin_src elisp
+  (defvar company-mode/enable-yas t "Enable yasnippet for all backends.")
+#+end_src
+add yasnippet backend to yasnippet
+#+begin_src elisp
+  (defun company-mode/backend-with-yas (backend)
+    (if (or (not company-mode/enable-yas) (and (listp backend)    (member 'company-yasnippet backend)))
+        backend
+      (append (if (consp backend) backend (list backend))
+          '(:with company-yasnippet))))
+
+  (setq company-backends (mapcar #'company-mode/backend-with-yas company-backends))
+#+end_src
+
+** COMMENT flycheck
+#+BEGIN_SRC elisp
+  (use-package flycheck
+     )
+#+END_SRC
+*** elisp mode
+#+begin_src elisp
+  (add-hook 'emacs-lisp-mode-hook #'flycheck-mode)
+#+end_src
+
+** abbrev
+#+begin_src elisp
+
+  (define-abbrev-table 'js-doc-table
+    '(("acst" "@constructor")
+      ("aprm" "@param")
+      ("aabs" "@abstract")
+      ("amd" "@module")
+      ("aetn" "@external")
+      ("aevt" "@aevt")
+      ("al" "@link")
+      ("atp" "@type")
+      ("ansp" "@namespace")
+      ("art" "@return")
+      ("afunc" "@function")
+      ("acb" "@callback")
+      ("aau" "@author")
+      ("atd" "@todo")))
+
+  (when (boundp 'js-mode-abbrev-table)
+    (clear-abbrev-table js-mode-abbrev-table))
+
+  (define-abbrev-table 'js-mode-abbrev-table nil
+    "abbrev tables for js mode"
+    :parents (list js-doc-table))
+
+  (set-default 'abbrev-mode t)
+
+  (setq save-abbrevs nil)
+#+end_src
+
+* major 配置
+** org mode
+[[https://github.crookster.org/switching-to-straight.el-from-emacs-26-builtin-package.el/][1]] [[http://jonathanj.in/dotemacs/][2]]
+*** COMMENT straight org bug
+[[http://www.mhatta.org/wp/2018/09/23/org-mode-101-6/][参考]]
+#+begin_src elisp
+  (require 'subr-x)
+  (straight-use-package 'git)
+
+  (defun org-git-version ()
+    "The Git version of org-mode.
+  Inserted by installing org-mode or when a release is made."
+    (require 'git)
+    (let ((git-repo (expand-file-name
+                     "straight/repos/org/" user-emacs-directory)))
+      (string-trim
+       (git-run "describe"
+                "--match=release\*"
+                "--abbrev=6"
+                "HEAD"))))
+
+  (defun org-release ()
+    "The release version of org-mode.
+  Inserted by installing org-mode or when a release is made."
+    (require 'git)
+    (let ((git-repo (expand-file-name
+                     "straight/repos/org/" user-emacs-directory)))
+      (string-trim
+       (string-remove-prefix
+        "release_"
+        (git-run "describe"
+                 "--match=release\*"
+                 "--abbrev=0"
+                 "HEAD")))))
+
+  (provide 'org-version)
+#+end_src
+*** org 基本设置
+install the org of last version by =package-install=
+#+begin_src elisp
+  (use-package org
+	       ;;:straight org-plus-contrib
+	       :straight (:local-repo nil)
+      :bind
+      (("C-c l" . org-store-link)
+       ("C-c a" . org-agenda))
+      :config
+      ;;(use-package org-tempo
+      ;;:straight nil)
+
+      (add-hook 'org-mode-hook (lambda ()
+				 (linum-mode        -1)
+				 (abbrev-mode)
+				 (iimage-mode)))
+
+      ;; (add-hook 'org-mode-hook 'visual-line-mode)
+      (add-hook 'org-src-mode-hook
+		(lambda ()
+		  (visual-line-mode nil)))
+      (setq org-src-window-setup 'current-window)
+      (setq org-startup-indented t)
+      ;;检查org版本看看是否需要下列代码
+
+      (font-lock-add-keywords 'org-mode
+			      ;;此处正则表达式
+			      '(("^ *\\([-]\\) "
+				 (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+      (setq org-hide-emphasis-markers t)
+
+      ;; org babel
+      (org-babel-do-load-languages 'org-babel-load-languages
+				   '((shell      . t)
+				     (js         . t)
+				     (emacs-lisp . t)
+				     (perl       . t)
+				     (python     . t)
+				     (css        . t)
+				     (sql        . t)
+				     (ruby       . t)
+				     (dot        . t)))
+      (setq org-src-fontify-natively t))
+#+end_src
+结构模板 [[https://emacs.stackexchange.com/questions/34651/how-can-i-create-custom-org-mode-templates][1]]
+
+*** org-bullets
+#+begin_src elisp
+  (use-package org-bullets
+    :straight t
+    :config
+    (setq org-hide-leading-stars t)
+    (add-hook 'org-mode-hook
+              (lambda ()
+                (org-bullets-mode t))))
+#+end_src
+
+*** org bable
+设置代码块编辑完成的退出
+#+begin_src elisp
+  (eval-after-load 'org-src
+    '(define-key org-src-mode-map
+       (kbd "C-x C-s") #'org-edit-src-exit))
+#+end_src
+
+set style of code block
+#+BEGIN_SRC elisp
+  (with-eval-after-load 'org
+    (defvar-local rasmus/org-at-src-begin -1
+      "Variable that holds whether last position was a ")
+
+    (defvar rasmus/ob-header-symbol ?☰
+      "Symbol used for babel headers")
+
+    (defun rasmus/org-prettify-src--update ()
+      (let ((case-fold-search t)
+            (re "^[ \t]*#\\+begin_src[ \t]+[^ \f\t\n\r\v]+[ \t]*")
+            found)
+        (save-excursion
+          (goto-char (point-min))
+          (while (re-search-forward re nil t)
+            (goto-char (match-end 0))
+            (let ((args (org-trim
+                         (buffer-substring-no-properties (point)
+                                                         (line-end-position)))))
+              (when (org-string-nw-p args)
+                (let ((new-cell (cons args rasmus/ob-header-symbol)))
+                  (cl-pushnew new-cell prettify-symbols-alist :test #'equal)
+                  (cl-pushnew new-cell found :test #'equal)))))
+          (setq prettify-symbols-alist
+                (cl-set-difference prettify-symbols-alist
+                                   (cl-set-difference
+                                    (cl-remove-if-not
+                                     (lambda (elm)
+                                       (eq (cdr elm) rasmus/ob-header-symbol))
+                                     prettify-symbols-alist)
+                                    found :test #'equal)))
+          ;; Clean up old font-lock-keywords.
+          (font-lock-remove-keywords nil prettify-symbols--keywords)
+          (setq prettify-symbols--keywords (prettify-symbols--make-keywords))
+          (font-lock-add-keywords nil prettify-symbols--keywords)
+          (while (re-search-forward re nil t)
+            (font-lock-flush (line-beginning-position) (line-end-position))))))
+
+    (defun rasmus/org-prettify-src ()
+      "Hide src options via `prettify-symbols-mode'.
+
+    `prettify-symbols-mode' is used because it has uncollpasing. It's
+    may not be efficient."
+      (let* ((case-fold-search t)
+             (at-src-block (save-excursion
+                             (beginning-of-line)
+                             (looking-at "^[ \t]*#\\+begin_src[ \t]+[^ \f\t\n\r\v]+[ \t]*"))))
+        ;; Test if we moved out of a block.
+        (when (or (and rasmus/org-at-src-begin
+                       (not at-src-block))
+                  ;; File was just opened.
+                  (eq rasmus/org-at-src-begin -1))
+          (rasmus/org-prettify-src--update))
+        (setq rasmus/org-at-src-begin at-src-block)))
+
+    (defun rasmus/org-prettify-symbols ()
+      (mapc (apply-partially 'add-to-list 'prettify-symbols-alist)
+            (cl-reduce 'append
+                       (mapcar (lambda (x) (list x (cons (upcase (car x)) (cdr x))))
+                               `(("#+begin_src" . ?✎) ;; ✎
+                                 ("#+end_src"   . ?☠) ;; ⏹
+                                 ("#+header:" . ,rasmus/ob-header-symbol)
+                                 ("#+begin_quote" . ?»)
+                                 ("#+end_quote" . ?«)))))
+      (turn-on-prettify-symbols-mode)
+      (add-hook 'post-command-hook 'rasmus/org-prettify-src t t))
+    (add-hook 'org-mode-hook #'rasmus/org-prettify-symbols))
+#+END_SRC
+
+**** COMMENT org src bac
+set background of code block
+#+BEGIN_SRC elisp
+  (require 'color)
+
+  (set-face-attribute 'org-block nil
+                      :background
+                      (color-darken-name
+                       (face-attribute 'default :background) 3))
+#+END_SRC
+
+**** ob-ansyc
+#+begin_src elisp
+  (use-package ob-async
+    :straight t)
+#+end_src
+
+*** COMMENT org-crypt
+
+:加密: 保存之后对带有 =:crypt:= 的 =tag= =条目= 进行加密
+:解密: 输入 =org-decrypt-entry= 根据提示解密
+#+begin_src elisp
+  (with-eval-after-load 'org
+    (require 'org-crypt)
+    (org-crypt-use-before-save-magic)
+    (setq org-tags-exclude-from-inheritance (quote("crypt")))
+    (setq org-crypt-key nil))
+#+end_src
+
+*** iimage-mode
+#+begin_src elisp
+  (with-eval-after-load 'org
+    (setq org-startup-with-inline-images t)
+    (setq org-image-actual-width (/ (display-pixel-width) 3)))
+#+end_src
+
+*** org-agenda
+#+BEGIN_SRC elisp
+  (with-eval-after-load 'org
+    (setq org-agenda-files (list "~/org/notes.org")))
+#+END_SRC
+
+*** org-capture
+#+begin_src elisp
+  (with-eval-after-load 'org
+      (setq org-default-notes-file (concat org-directory "/notes.org"))
+    (define-key global-map "\C-cc" 'org-capture))
+#+end_src
+模板 [[https://www.reddit.com/r/emacs/comments/7zqc7b/share_your_org_capture_templates/][1]]
+#+begin_src elisp
+  (with-eval-after-load 'org
+    (setq org-capture-templates
+          '(("e" "event" entry (file+headline "~/org/notes.org" "Event")
+             "* TODO %?\n%U"
+             :empty-lines 1))))
+#+end_src
+
+** COMMENT mu4e
+参考 [[https://www.junahan.com/post/emacs-mu4e/][1]]
+*** 安装软件
+- [[https://snapcraft.io/install/maildir-utils/manjaro][安装mu]]
+  安装完成后运行
+  #+begin_src sh
+    mu index --maildir="/path/to/Maildir"
+  #+end_src
+  - 安装 =offlineimap=
+
+    #+begin_src sh
+    sudo pacman -S offlineimap
+    #+end_src
+
+*** 配置文件
+**** =offlineimap=                                                   :crypt:
+-----BEGIN PGP MESSAGE-----
+
+jA0EBwMCitbCbaY5iFbt0sDWAYxmRmdLnwX6GQiZM751I07Dnfzwj/u+rtrsLRxM
+DIi43anQPGKjNb7hBvmpVeo7sGaJ4BceEoU14yHza7pmxC9WiBDiq7Z67beoYxiw
+erEEkEMaaMUDvu/H1etqjkqbumROwikPFv+PiwdNehu17FjSlWFUEkPMEVKBn2+B
++jS8y845UQPjCGxoFL/P+TFN4Z/1wzzGsclP4micn2/omnqbHRBffg1cOnjKThng
+22Xlfb6+cvDgz1ln0mNohOfk2ww6lzbTaCGoBjFdhh/sM/DjRIUcpX8c6N4ozUw4
+J7z7Uf/wA0NV+oKfiSkfoZ2aRRv4vCr20J/bViBEpJYo8Cs1UsBqQCEcg+aflK0A
+76/p69zqNu0ZpTE9ilwKQ2LMxXT0AmotPEYjlRNHHT8U0WAD+qqhwJ7MUPxlJ0B1
+E2HZ9Q4D1AYYayYnZjOETAqo4xsQi+HKZjCb8eprNYoDzCtAxCHEIfcDHVidzc5Y
+6ptLvb7GmYVJlMUi1hleB4MAu0duMjiFpy+ng74Zc/wsbw92TtUjaw==
+=YMCB
+-----END PGP MESSAGE-----
+
+**** authinfo                                                      :crypt:
+-----BEGIN PGP MESSAGE-----
+
+jA0EBwMC2OgFntKdGn/t0sAZAVA6l4wc9vLDOlTWAswJRNssC0dbZowus8GLstVS
+7wTPruA0/YECBd87pM9FQ4mq8XVAD1aZhw5Vrk7zRoY/NvCQRB0mx3c3BG58fr/p
+pzwx+X2+dL6p4pt5rWBO8dv2m/wk3O9XVSTSfjP96nBz8tDMCvA4yPpKTl3V9zy2
+KisjvdbXgucr5MyVaKnS+qXqfd9jUXcvUnHytjrb+VTUg3WDqXGOYn9hjVSBA0En
+7TyXsYZGvTI3jFmugzyrodmsBNAy8VVAYb1Ye0AlDDKg0Fk9pLnquVV81w==
+=nh/A
+-----END PGP MESSAGE-----
+
+*** 添加路径
+
+#+begin_src elisp
+  (add-to-list 'load-path "/var/lib/snapd/snap/maildir-utils/2/share/emacs/site-lisp/mu4e")
+  ;; (add-to-list 'Info-directory-list "/var/lib/snapd/snap/maildir-utils/2/share/info")
+#+end_src
+
+*** smtp
+
+#+begin_src elisp
+  (require 'smtpmail-async)
+  (require 'smtpmail)
+  ;; (setq message-send-mail-function 'smtpmail-send-it)
+  (setq message-send-mail-function 'async-smtpmail-send-it
+        send-mail-function	 'async-smtpmail-send-it)
+
+#+end_src
+
+*** mu4e
+
+#+begin_src elisp
+  (require 'mu4e)
+
+  (setq mail-user-agent 	'mu4e-user-agent
+        mu4e-maildir  	"~/Maildir"
+        mu4e-get-mail-command	"offlineimap"
+        mu4e-update-interval	1000)
+
+  ;;;;;;;;;;
+  ;; (setq mu4e-sent-folder  "/Sent"
+  ;;       mu4e-drafts-folder "/Drafts"
+  ;;       mu4e-trash-folder "/Trash")
+
+  ;; (setq user-full-name "吴志越")          ; FIXME: add your info here
+  ;; (setq user-mail-address "red4fd@163.com"); FIXME: add your info here
+
+  ;; (setq smtpmail-smtp-server 	"smtp.163.com"
+  ;;       smtpmail-smtp-service 	465
+  ;;       smtpmail-smtp-user	"red4fd@163.com"
+  ;;      smtpmail-stream-type	'ssl)
+  (setq smtpmail-stream-type 'ssl)
+  ;;;;;;;;;;;
+  (setq mu4e-contexts
+        `( ,(make-mu4e-context
+            :name "163mail"
+            :enter-func (lambda () (mu4e-message "entering @163 context"))
+            :leave-func (lambda () (mu4e-message "leaving @163 context"))
+            :match-func (lambda (msg)
+                          (when msg
+                            (mu4e-message-contact-field-matches msg
+                                                                :to "red4fd@163.com")))
+            :vars '((mu4e-compose-signature . nil)
+                    ;; 在messsage显示的默认信息
+                    (user-full-name         . "吴志越")
+                    (user-mail-address      . "red4fd@163.com")
+                    ;; 服务器信息，以及登录信息
+                    (smtpmail-smtp-server   . "smtp.163.com")
+                    (smtpmail-smtp-service  . 465)
+                    (smtpmail-smtp-user     . "red4fd@163.com")
+                    ;; (smtpmail-stream-type   . 'ssl)
+                    ;; 邮件存放的位置
+                    (mu4e-sent-folder       . "/Sent/163")
+                    (mu4e-drafts-folder     . "/Drafts/163")
+                    (mu4e-trash-folder      . "/Trash/163")))
+          ,(make-mu4e-context
+            :name "qq mail"
+            :enter-func (lambda () (mu4e-message "entering @qq context"))
+            :leave-func (lambda () (mu4e-message "leaving @qq context"))
+            :match-func (lambda (msg)
+                          (when msg
+                            (mu4e-message-contact-field-matches msg
+                                                                :to "2249284426@qq.com")))
+            :vars '((mu4e-compose-signature . nil)
+                    ;; 在messsage显示的默认信息
+                    (user-full-name         . "吴志越")
+                    (user-mail-address      . "2249284426@qq.com")
+                    ;; 服务器信息，以及登录信息
+                    (smtpmail-smtp-server   . "smtp.qq.com")
+                    (smtpmail-smtp-service  . 465)
+                    (smtpmail-smtp-user     . "2249284426@qq.com")
+                    ;; (smtpmail-stream-type   . 'starttls)
+                    ;; 邮件存放的位置
+                    (mu4e-sent-folder       . "/Sent/qq")
+                    (mu4e-drafts-folder     . "/Drafts/qq")
+                    (mu4e-trash-folder      . "/Trash/qq"))
+            )))
+
+  (setq mu4e-context-policy 'ask)
+  (setq mu4e-compose-context-policy nil)
+
+  (require 'mu4e-contrib)
+  (setq mu4e-html2text-command 'mu4e-shr2text)
+  ;; try to emulate some of the eww key-bindings
+  (add-hook 'mu4e-view-mode-hook
+            (lambda ()
+              (local-set-key (kbd "<tab>") 'shr-next-link)
+              (local-set-key (kbd "<backtab>") 'shr-previous-link)))
+
+  (setq mu4e-view-show-images t)
+
+  (require 'org-mu4e)
+  ;;(setq org-mu4e-convert-to-html t)
+#+end_src
+
+*** mu4e view
+#+begin_src elisp :tangle no
+  (setq mu4e-view-use-gnus t)
+#+end_src
+
+使用下面的配置，在 =mu4e-view-mode= 下执行 `a` `V` 即可在浏览器中打开邮件
+#+begin_src elisp
+  (add-to-list 'mu4e-view-actions '("ViewInBrowser" . mu4e-action-view-in-browser) t)
+#+end_src
+
+*** mu4e alert
+#+begin_src elisp
+  (use-package mu4e-alert
+     )
+
+  (defun mu4e-alert-personal-mode-line-formatter (mail-count)
+    "show message icon
+  :require `all-the-icons'"
+    (when (not (zerop mail-count))
+      (concat " "
+              (all-the-icons-octicon "mail"
+                                     :height 1
+                                     :v-adjust 0.03
+                                     :face 'font-lock-constant-face))))
+
+  (setq mu4e-alert-modeline-formatter #'mu4e-alert-personal-mode-line-formatter)
+
+  (mu4e-alert-set-default-style 'libnotify)
+  (add-hook 'after-init-hook #'mu4e-alert-enable-notifications)
+
+  (add-hook 'after-init-hook #'mu4e-alert-enable-mode-line-display)
+#+end_src
+
+** conf mode
+*** yaml mode
+#+BEGIN_SRC elisp
+  (use-package yaml-mode
+    :straight t
+    :mode "\\yml\\'")
+#+END_SRC
+
+*** fish mode
+#+begin_src elisp
+  (use-package fish-mode
+    :straight t)
+#+end_src
+
+*** json mode
+#+begin_src elisp
+  (use-package json-mode
+    :straight t
+    :mode "\\json\\'"
+    :config
+    (setq-local js-indent-level 2)
+    (add-hook 'json-mode-hook
+              #'(lambda ()
+                  (set (make-local-variable 'js-mode-hook) nil)
+                  (set (make-local-variable 'before-save-hook) '(delete-trailing-whitespace)))))
+#+end_src
+
+** ruby mode
+#+begin_src elisp
+  (use-package ruby-mode
+    :straight t
+    :mode ("\\rb\\'" "Rakefile\\'" "Gemfile\\'" "Brewfile\\'" "Vagrantfile\\'")
+    :interpreter "ruby"
+    :hook
+    (ruby-mode . inf-ruby-minor-mode))
+#+end_src
+inf-ruy-mode
+#+begin_src elisp
+  (use-package inf-ruby
+    :straight t
+    :config
+    (add-hook 'inf-ruby-mode-hook (lambda ()
+                               (linum-mode -1))))
+#+end_src
+*** rvm
+#+begin_src elisp
+  (use-package rvm
+    :straight t
+    :config
+    (rvm-use-default)
+    (setq red/rvm-PATH t))
+#+end_src
+
+** cc mode
+*** base
+#+begin_src elisp
+  (use-package cc-mode
+    :bind(:map c-mode-base-map
+               ("DEL" . pes-smart-backspace))
+    :config
+    (setq c-default-style "linux") ;; set style to "linux"
+    (setq c-basic-offset 4))
+#+end_src
+
+*** gdb
+#+begin_src elisp
+  (require 'gdb-mi)
+
+  (use-package gdb-mi
+    :after (cc-mode)
+    :config
+    (setq gdb-many-windows t ;; use gdb-many-windows by default
+          gdb-show-main t)
+    (add-hook 'gdb-frames-mode-hook
+              (lambda ()
+                (set (make-local-variable 'tool-bar-mode) t))))
+#+end_src
+
+*** COMMENT cmake mode
+#+begin_src elisp
+  (use-package cmake-mode
+    :straight t)
+#+end_src
+
+** emacs lisp mode
+#+begin_src elisp
+  ;;(setq elisp-load-path "d:/emacs/share/emacs/26.3/lisp/progmodes")
+
+  (use-package highlight-defined
+    :straight t
+    :hook (emacs-lisp-mode . highlight-defined-mode))
+
+  ;; (when (directory-name-p elisp-load-path)
+  ;;   (use-package elisp-mode
+  ;;     :load-path elisp-load-path
+  ;;     :bind(:map emacs-lisp-mode-map ("DEL" . pes-smart-backspace)
+  ;;                :map lisp-interaction-mode-map ("DEL" . pes-smart-backspace))
+  ;;     :config
+  ;;     (add-hook 'emacs-lisp-mode-hook
+  ;;               #'(lambda ()
+  ;;                   (setq truncate-lines t)))))
+
+  ;; (use-package elisp-mode
+  ;;     :straight (:type build-in)
+  ;;     :bind(:map emacs-lisp-mode-map ("DEL" . pes-smart-backspace)
+  ;; 	       :map lisp-interaction-mode-map ("DEL" . pes-smart-backspace))
+  ;;     :config
+  ;;     (add-hook 'emacs-lisp-mode-hook
+  ;; 	      #'(lambda ()
+  ;; 		  (setq truncate-lines t))))
+#+end_src
+
+** common lisp [[https://astraybi.wordpress.com/2015/08/02/how-to-install-slimesbclquicklisp-into-emacs/][1]] [[https://common-lisp.net/project/common-lisp-beginner/][2]]
+sly
+#+begin_src elisp
+  (use-package sly
+    :straight t
+    :config
+    ;;(setq inferior-lisp-program "/usr/bin/sbcl")
+    (eval-after-load 'sly
+    `(define-key sly-prefix-map (kbd "M-h") 'sly-documentation-lookup)))
+#+end_src
+
+** front end
+*** javascript
+#+begin_src elisp
+  ;; (use-package js2-mode
+  ;;   :after (js)
+  ;;   :hook ((js-mode . js2-minor-mode))
+  ;;   :config
+  ;;   (setq js2-basic-offset 2))
+
+  (use-package tide
+    :straight t
+    :after (company)
+    :hook ((js-mode . tide-setup)
+           (js-mode . tide-hl-identifier-mode)
+           (before-save . tide-format-before-save)))
+
+  (use-package indium
+    :straight t
+    ;; open a local server in localhost by
+    ;; @code:: python -m http.server
+    ;; default port is 80000
+    ;; add `"url": http://localhost:8000/xxx.htm` to .indium.json
+    ;; run indium-connect
+    :bind (:map indium-repl-mode-map
+                ("C-c C-s" . indium-scratch))
+    :hook ((js-mode . indium-interaction-mode)))
+
+  (use-package js
+    :bind
+    (:map js-mode-map
+          ("DEL" . pes-smart-backspace))
+    :config
+    (setq js-indent-level 2))
+#+end_src
+
+*** css
+#+begin_src elisp
+  (use-package css-mode
+    :bind
+    (:map css-mode-map
+          ("DEL" . pes-smart-backspace))
+    :config
+    (setq css-indent-offset 2)
+    (add-hook 'css-mode-hook
+              (lambda ()
+                (set (make-local-variable 'pes-css-after-ccfh-switch) t))))
+#+end_src
+
+*** web mode
+#+begin_src elisp
+  (defun pes-web-get-filename ()
+    (let* ((st- (pes-search-get-point
+                 #'(lambda (str &optional bound noerror count)
+                     (search-backward str bound noerror count) (forward-char))
+                 "\"" t))
+           (-end (pes-search-get-point
+                  #'(lambda (str &optional bound noerror count)
+                      (search-forward str bound noerror count) (backward-char))
+                  "\"" t))
+           (name (buffer-substring st- -end))
+           (path (concat default-directory
+                         (if (string-prefix-p "/" name)
+                             name
+                           (when name (concat "/" name))))))
+      (if (not (string= default-directory path))
+          path
+        nil)))
+
+  (use-package web-mode
+    :straight t
+    :mode ("\\.erb\\'" "\\.html?\\'")
+    :preface
+    (defun pes-web-goto-file ()
+      (interactive)
+      (let ((file (pes-web-get-filename)))
+        (when (and file (file-exists-p file))
+          (find-file file))))
+    :bind
+    (:map web-mode-map
+          ("DEL" . pes-smart-backspace)
+          ("C-c C-u" . browse-url-of-file)
+          ("C-c C-o" . pes-web-goto-file))
+    :config
+    (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
+    (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
+
+    (setq web-mode-markup-indent-offset			2
+          web-mode-css-indent-offset			2
+          web-mode-code-indent-offset			2
+          web-mode-enable-auto-pairing			t
+          web-mode-enable-css-colorization		t
+  ;;        web-mode-enable-part-face			t
+          web-mode-enable-comment-interpolation		t
+          web-mode-enable-current-element-highlight	t))
+#+end_src
+
+**** emmet mode
+#+begin_src elisp
+  (use-package emmet-mode
+    :straight t
+    :hook((css-mode . emmet-mode)
+          (web-mode . emmet-mode)))
+#+end_src
+
+* load custom
+#+begin_src elisp
+  (when (file-exists-p custom-file)
+    (load custom-file))
+#+end_src
+
+* package provide
+#+begin_src elisp
+  (provide 'dotemacs)
+#+end_src
