@@ -1,6 +1,6 @@
 
 #+title: dotlinux
-#+description: 这个项目用来记录linux软件的配置,linux命令的个人学习笔记,
+#+description: 用来记录linux软件的配置,linux命令的个人学习笔记...
 #+STARTUP: hideblocks
 
 * dotemacs

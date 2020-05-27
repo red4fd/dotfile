@@ -153,7 +153,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 #+end_src
 
 * 包管理
-** ca
+** COMMENT ca
 #+begin_src elisp
   (when (string-equal system-type "windows-nt")
     (setq windows-emacs-install "d:/emacs/")
@@ -171,7 +171,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 	  ssl-trustfiles))
 #+end_src
 ** package manager
-*** COMMENT 设置package的源，这里选择[[https://elpa.emacs-china.org][emacs-china]]的melpa镜像地址
+*** 设置package的源，这里选择[[https://elpa.emacs-china.org][emacs-china]]的melpa镜像地址
 #+begin_src elisp
   (package-initialize)
   (setq package-archives '(("gnu"   . "http://elpa.emacs-china.org/gnu/")
@@ -187,7 +187,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 
   (setq use-package-always-ensure t)
 #+end_src
-*** 使用 straight [[https://www.ioiox.com/archives/62.html][1]]
+*** COMMENT 使用 straight [[https://www.ioiox.com/archives/62.html][1]]
 - github...content 无法访问
   修改 host 文件
   linux: /etc/host
@@ -221,12 +221,12 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** all the icons
 #+begin_src elisp
   (use-package all-the-icons
-      :straight t)
+      )
 #+end_src
 ** dash
 #+BEGIN_SRC elisp
   (use-package dash
-    :straight t)
+    )
 #+END_SRC
 * Red's function
 ** emacs system
@@ -457,6 +457,36 @@ frame设置,关闭光标，菜单，工具栏，滚动条
                  attributes-m))
       (format "")))
 #+END_SRC
+** pes window windows exchange left <-> right
+#+BEGIN_SRC elisp
+  (require 'windmove)
+
+  (defun pes-exchange-windows ()
+    "Swap the current buffer and the buffer on the right of the split.
+  If there is no split, ie now window on the right of the current
+  one, an error is signaled."
+    (interactive)
+    (let* ((other-win-p (or (windmove-find-other-window 'right)
+                            (windmove-find-other-window 'left)))
+           (other-win
+            (if (null other-win-p)
+                nil
+              (windmove-find-other-window
+               (if (eq
+                    (window-buffer (windmove-find-other-window 'right))
+                    (window-buffer))
+                   'left
+                 'right))))
+           (buf-this-buf (window-buffer (selected-window))))
+      (if (null other-win)
+          (error "No window split")
+        (set-window-buffer (selected-window) (window-buffer other-win))
+        (set-window-buffer other-win buf-this-buf)
+        (select-window (selected-window)))))
+
+  (global-set-key (kbd "C-x x") 'pes-exchange-windows)
+#+END_SRC
+
 ** COMMENT Smart enter
 作用于 c-like 代码中的函数
 对成对的大括号，回车后自动增加新的一行并且缩进
@@ -485,7 +515,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** 主题设置
 #+begin_src elisp
   (use-package zenburn-theme
-    :straight t
+
     :config
     ;;(setq zenburn-use-variable-pitch t)
     (setq zenburn-scale-org-headlines t)
@@ -498,7 +528,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
   (defvar pes-test nil)
 
   (use-package mini-modeline
-    :straight t
+
     :preface
     (defface pes-mini-hide-modeline-line
       '((((background light))
@@ -572,7 +602,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** dimmer
 #+begin_src elisp
   (use-package dimmer
-    :straight t
+
     :config
     (dimmer-configure-which-key)
     (dimmer-configure-posframe)
@@ -601,7 +631,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 在org-mode 中有冲突
 #+begin_src elisp
   (use-package avy
-    :straight t
+
     :bind
     ("C-c g" . avy-goto-word-1))
 #+end_src
@@ -609,7 +639,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** expand-refion
 #+BEGIN_SRC elisp
   (use-package expand-region
-    :straight t
+
     :bind
     ("C-=" . er/expand-region))
 #+END_SRC
@@ -618,7 +648,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 在org-mode 中有冲突
 #+BEGIN_SRC elisp
   (use-package multiple-cursors
-    :straight t
+
     :bind
     ("C-c C-s" . mc/edit-lines)
     ("C->" . mc/mark-next-like-this)
@@ -630,7 +660,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 在help文档中看起来还不错
 #+BEGIN_SRC elisp
   (use-package page-break-lines
-    :straight t
+
     :config
     (global-page-break-lines-mode))
 #+END_SRC
@@ -639,8 +669,8 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** recentf
 #+BEGIN_SRC elisp
   (use-package recentf
-    :straight t
     :config
+    (setq recentf-exclude '("bookmarks"))
     (setq recentf-save-file (recentf-expand-file-name "~/.emacs.d/private/cache/recentf"))
     (recentf-mode 1))
 #+END_SRC
@@ -648,7 +678,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** undo-tree
 #+BEGIN_SRC elisp
   (use-package undo-tree
-    :straight t
+
     :config
     ;; Remember undo history
     (setq
@@ -663,7 +693,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 |-----+----------------|
 #+BEGIN_SRC elisp
   (use-package comment-dwim-2
-    :straight t
+
     :config
     (global-set-key (kbd "M-;") 'comment-dwim-2)
     (setq cd2/region-command 'cd2/comment-or-uncomment-region)
@@ -673,7 +703,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** color-identifiers-mode
 #+begin_src elisp
   (use-package color-identifiers-mode
-    :straight t
+
     :config
     (add-hook 'after-init-hook #'color-identifiers-mode))
 #+end_src
@@ -681,7 +711,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** youdao
 #+begin_src elisp
   (use-package youdao-dictionary
-    :straight t
+
     :config
     (global-set-key (kbd "C-c y") 'youdao-dictionary-search-at-point-tooltip))
 #+end_src
@@ -689,13 +719,13 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** writeroom-mode
 #+begin_src elisp
   (use-package writeroom-mode
-    :straight t)
+    )
 #+end_src
 
 ** smartparens
 #+BEGIN_SRC elisp
   (use-package smartparens
-    :straight t
+
     :config
     (smartparens-global-mode t)
     (require 'smartparens-config))
@@ -709,7 +739,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** beacon
 #+begin_src elisp
   (use-package beacon
-    :straight t
+
     :init
     (setq beacon-color "#663333")
     :config
@@ -718,7 +748,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** imenu
 #+begin_src elisp
   (use-package imenu-list
-    :straight t
+
     :bind (("C-'" . imenu-list-smart-toggle))
     :config (setq imenu-list-auto-resize t
                   imenu-list-focus-after-activation t
@@ -728,7 +758,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** rainbow delimiter
 #+begin_src elisp
   (use-package rainbow-delimiters
-    :straight t
+
     :hook (emacs-lisp-mode . rainbow-delimiters-mode))
 #+end_src
 
@@ -760,7 +790,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** ivy [[https://ladicle.com/post/config/#ivy][1]]
 #+BEGIN_SRC elisp
   (use-package ivy
-    :straight t
+
     :bind
     (("C-x s" . swiper)
      ("C-x C-r" . ivy-resume)
@@ -797,7 +827,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** ivy-posframe
 #+begin_src elisp
   (use-package ivy-posframe
-    :straight t
+
     :config
     (setq ivy-posframe-display-functions-alist
           '((swiper          . nil)
@@ -811,13 +841,13 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** smex
 #+BEGIN_SRC elisp
   (use-package smex
-    :straight t)
+    )
 #+END_SRC
 
 ** which-key
 #+BEGIN_SRC elisp
   (use-package which-key
-    :straight t
+
     :config
     (which-key-mode))
 #+END_SRC
@@ -825,7 +855,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** counsel
 #+BEGIN_SRC elisp
   (use-package counsel
-    :straight t
+
     :bind
     (("M-x" . counsel-M-x)
      ("C-x C-f" . counsel-find-file)
@@ -837,7 +867,7 @@ if you want use =counsel-ag=,you need to install it in your computer
   sudo pacman -S the_silver_searcher
 #+end_src
 
-** dired +
+** COMMENT dired +
 #+BEGIN_SRC elisp
   (use-package dired+
     :straight (:host github :repo "emacsmirror/dired-plus"))
@@ -854,9 +884,22 @@ if you want use =counsel-ag=,you need to install it in your computer
 ** magit,magit-popup
 #+BEGIN_SRC elisp
   (use-package magit
-    :straight t
+    :preface
+    (defun wsl-get-dir-from-win-style (dir)
+      (let* ((base (split-string dir ":"))
+             (header-nt (car base))
+             (header-wsl (when header-nt
+                           (concat "/mnt/" header-nt)))
+             (path (concat header-wsl
+                           (car (cdr base)))))
+        path))
+
+    (defun wsl-magit-directory (prompt &rest args)
+      (let ((dir (apply #'read-directory-name (cons prompt args))))
+        (wsl-get-dir-from-win-style dir)))
     :config
     (setq magit-completing-read-function 'ivy-completing-read)
+    ;;(setq magit-worktree-read-directory-name-function #'wsl-magit-directory)
     :bind
     ;; Magic
     ("C-x g s" . magit-status)
@@ -867,14 +910,14 @@ if you want use =counsel-ag=,you need to install it in your computer
     ("C-x g e" . magit-ediff-resolve)
     ("C-x g r" . magit-rebase-interactive))
 
-  (use-package magit-popup
-    :straight t)
+  ;; (use-package magit-popup
+  ;;   )
 #+END_SRC
 
 ** projectile
 #+BEGIN_SRC elisp
   (use-package projectile
-    :straight t
+
     :config
     (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
     (setq projectile-completion-system 'ivy)
@@ -884,7 +927,7 @@ if you want use =counsel-ag=,you need to install it in your computer
 ** counsel-projectile
 #+BEGIN_SRC elisp
   (use-package counsel-projectile
-    :straight t
+
     :config
     (counsel-projectile-mode))
 #+END_SRC
@@ -893,12 +936,12 @@ if you want use =counsel-ag=,you need to install it in your computer
 ** linum 行号显示
 #+begin_src elisp
   (use-package hlinum
-    :straight t
+
     :config
     (hlinum-activate))
 
   (use-package linum
-    :straight t
+
     :config
     (setq linum-format " %3d "))
 #+end_src
@@ -906,7 +949,7 @@ if you want use =counsel-ag=,you need to install it in your computer
 ** fill-column-indicator
 #+begin_src elisp
   (use-package fill-column-indicator
-    :straight t)
+    )
 #+end_src
 *** emacs lisp
 #+begin_src elisp
@@ -920,7 +963,7 @@ if you want use =counsel-ag=,you need to install it in your computer
 *** lsp mode
 #+begin_src elisp
   (use-package lsp-mode
-    :straight t
+
     :hook ((ruby-mode . lsp-deferred)
            (lsp-mode . lsp-enable-which-key-integration))
            ;; (js-mode . lsp-deferred))
@@ -946,7 +989,7 @@ if you want use =counsel-ag=,you need to install it in your computer
 *** ccls
 #+begin_src elisp
   (use-package ccls
-    :straight t
+
     :hook ((c-mode c++-mode objc-mode cuda-mode) .
            (lambda ()
              (require 'ccls)
@@ -970,7 +1013,7 @@ if you want use =counsel-ag=,you need to install it in your computer
 ** company
 #+BEGIN_SRC elisp
   (use-package company
-    :straight t
+
     :bind
     (:map company-active-map
           ("C-n" . company-select-next)
@@ -996,7 +1039,7 @@ if you want use =counsel-ag=,you need to install it in your computer
 **** company lsp
 #+begin_src elisp
   (use-package company-lsp
-    :straight t
+
     :requires company
     :commands company-lsp
     :config
@@ -1179,7 +1222,7 @@ gnome 插件的 bug 原因暂时放弃
               (set (make-local-variable 'company-backends)
                    '(company-clang comapny-files (company-keywords company-dabbrev-code)))
               (use-package company-c-headers
-                :straight t
+
                 :config
                 (add-to-list 'company-backends 'company-c-headers))))
 #+end_src
@@ -1197,7 +1240,7 @@ gnome 插件的 bug 原因暂时放弃
 #+begin_src elisp
   (require 'company-css)
   (use-package company-web
-    :straight t)
+    )
 
   (add-hook 'web-mode-hook
             (lambda ()
@@ -1236,7 +1279,7 @@ gnome 插件的 bug 原因暂时放弃
 ** yasnippet
 #+BEGIN_SRC elisp
   (use-package yasnippet
-    :straight t
+
     :config
     (setq yas-snippet-dirs (cons (concat pes-root-directory "snippets") nil))
     (yas-global-mode 1)
@@ -1304,7 +1347,26 @@ add yasnippet backend to yasnippet
 
 * major 配置
 ** org mode
+
 [[https://github.crookster.org/switching-to-straight.el-from-emacs-26-builtin-package.el/][1]] [[http://jonathanj.in/dotemacs/][2]]
+*** directory config
+#+BEGIN_SRC elisp
+  (defvar local-todo-file "e:/github/todo/todo.org"
+    "保存每天的待办事项的文件")
+
+  (defvar local-org-directory "e:/OneDrive/org"
+    "同步的目录，使用网盘进行同步")
+
+  (defvar pes-note-books-dirname "/book-notes/"
+    "读书笔记的目录 父目录 `local-org-directory'")
+
+  (defvar pes-diary-file-name "/diary"
+    "保存日记的文件名 父目录 `local-org-directory'")
+
+  (defvar pes-bookmark-file-name "/bookmarks"
+    "保存书签的文件名 父目录 `local-org-directory'")
+#+END_SRC
+
 *** COMMENT straight org bug
 [[http://www.mhatta.org/wp/2018/09/23/org-mode-101-6/][参考]]
 #+begin_src elisp
@@ -1343,45 +1405,44 @@ add yasnippet backend to yasnippet
 install the org of last version by =package-install=
 #+begin_src elisp
   (use-package org
-	       ;;:straight org-plus-contrib
-	       :straight (:local-repo nil)
+               ;;:straight org-plus-contri
       :bind
       (("C-c l" . org-store-link)
        ("C-c a" . org-agenda))
       :config
       ;;(use-package org-tempo
       ;;:straight nil)
-
+      (require 'org-tempo nil t)
       (add-hook 'org-mode-hook (lambda ()
-				 (linum-mode        -1)
-				 (abbrev-mode)
-				 (iimage-mode)))
+                                 (linum-mode        -1)
+                                 (abbrev-mode)
+                                 (iimage-mode)))
 
       ;; (add-hook 'org-mode-hook 'visual-line-mode)
       (add-hook 'org-src-mode-hook
-		(lambda ()
-		  (visual-line-mode nil)))
+                (lambda ()
+                  (visual-line-mode nil)))
       (setq org-src-window-setup 'current-window)
       (setq org-startup-indented t)
       ;;检查org版本看看是否需要下列代码
 
       (font-lock-add-keywords 'org-mode
-			      ;;此处正则表达式
-			      '(("^ *\\([-]\\) "
-				 (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+                              ;;此处正则表达式
+                              '(("^ *\\([-]\\) "
+                                 (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
       (setq org-hide-emphasis-markers t)
 
       ;; org babel
       (org-babel-do-load-languages 'org-babel-load-languages
-				   '((shell      . t)
-				     (js         . t)
-				     (emacs-lisp . t)
-				     (perl       . t)
-				     (python     . t)
-				     (css        . t)
-				     (sql        . t)
-				     (ruby       . t)
-				     (dot        . t)))
+                                   '((shell      . t)
+                                     (js         . t)
+                                     (emacs-lisp . t)
+                                     (perl       . t)
+                                     (python     . t)
+                                     (css        . t)
+                                     (sql        . t)
+                                     (ruby       . t)
+                                     (dot        . t)))
       (setq org-src-fontify-natively t))
 #+end_src
 结构模板 [[https://emacs.stackexchange.com/questions/34651/how-can-i-create-custom-org-mode-templates][1]]
@@ -1389,7 +1450,7 @@ install the org of last version by =package-install=
 *** org-bullets
 #+begin_src elisp
   (use-package org-bullets
-    :straight t
+
     :config
     (setq org-hide-leading-stars t)
     (add-hook 'org-mode-hook
@@ -1489,9 +1550,8 @@ set background of code block
 **** ob-ansyc
 #+begin_src elisp
   (use-package ob-async
-    :straight t)
+    )
 #+end_src
-
 *** COMMENT org-crypt
 
 :加密: 保存之后对带有 =:crypt:= 的 =tag= =条目= 进行加密
@@ -1512,24 +1572,123 @@ set background of code block
 #+end_src
 
 *** org-agenda
+[[https://orgmode.org/worg/org-tutorials/org-custom-agenda-commands.html][1]]
 #+BEGIN_SRC elisp
   (with-eval-after-load 'org
-    (setq org-agenda-files (list "~/org/notes.org")))
+    (require 'org-agenda)
+    (setq org-agenda-window-setup	'current-window)
+
+    (add-to-list 'org-agenda-custom-commands
+                 `("m" . "persional view"))
+    )
+
+  (defun org-agenda-skip-deadline-if-not-today ()
+    "过滤掉今天之外的 todo"
+    (ignore-errors
+      (let ((subtree-end (save-excursion (org-end-of-subtree t)))
+            (deadline-day
+             (time-to-days
+              (org-time-string-to-time
+               (org-entry-get nil "DEADLINE"))))
+            (now (time-to-days (current-time))))
+        (and deadline-day
+             (<= deadline-day now)
+             subtree-end))))
 #+END_SRC
 
 *** org-capture
 #+begin_src elisp
   (with-eval-after-load 'org
-      (setq org-default-notes-file (concat org-directory "/notes.org"))
+    (setq org-default-notes-file (concat org-directory "/default.org"))
     (define-key global-map "\C-cc" 'org-capture))
 #+end_src
-模板 [[https://www.reddit.com/r/emacs/comments/7zqc7b/share_your_org_capture_templates/][1]]
+模板 [[https://www.reddit.com/r/emacs/comments/7zqc7b/share_your_org_capture_templates/][1]] [[https://www.zmonster.me/2018/02/28/org-mode-capture.html][2]]
+#+begin_src elisp
+
+  (with-eval-after-load 'recentf
+    (add-to-list 'recentf-exclude pes-note-books-dirname)
+    (add-to-list 'recentf-exclude pes-diary-file-name))
+
+  (defun pes-get-book-note ()
+    "以交互的方式得到书名"
+    (let* ((def-dir (concat local-org-directory pes-note-books-dirname))
+           (dir (read-file-name "请输入书名: " def-dir)))
+      (find-file (format "%s" dir))))
+
+  (defun pes-get-webname-by-url (url)
+    "通过 url 得到网站名"
+    (when (stringp url)
+      (let* ((web-all-name
+              (car (cdr (split-string url "/+"))))
+             (web-name-list
+              (split-string web-all-name "\\."))
+             (web-name
+              (if (equal (length web-name-list) 3)
+                  (car (cdr web-name-list))
+                (car web-name-list))))
+        web-name)))
+
+  (with-eval-after-load 'org
+    (add-hook 'org-capture-mode-hook 'delete-other-windows)
+
+    (setq org-capture-templates nil)
+
+    ;;; 默认的备份
+    (add-to-list 'org-capture-templates
+                 '("e" "event" entry (file+headline "~/org/notes.org" "Event")
+                   "* TODO %?\n%U"))
+    ;;; 每天的 todo list
+    (add-to-list 'org-capture-templates
+                 `("t" "today" entry (file+datetree ,local-todo-file)
+                   "* TODO %? %(org-deadline 1 \"24pm\")" :kill-buffer t))
+    (add-to-list 'org-agenda-custom-commands
+                 `("mt" "查看今天的待办事项" todo ""
+                   ((org-agenda-span 'day)
+                    (org-agenda-files `(,local-todo-file))
+                    (org-agenda-entry-types '(:deadline))
+                    (org-agenda-skip-function '(org-agenda-skip-deadline-if-not-today))
+                    (org-agenda-overriding-header "今天要做的事 "))))
+    ;;; 自己的 capture
+    (add-to-list 'org-capture-templates
+                 '("m" "persional"))
+    (add-to-list 'org-capture-templates
+                 `("md" "日记本" entry (file+datetree ,(concat local-org-directory pes-diary-file-name))
+                   "* %t\n%? " :kill-buffer t))
+    (add-to-list 'org-capture-templates
+                 `("mn" "读书笔记" plain (function pes-get-book-note)
+                   "%?" :unnarrowed t :kill-buffer t))
+    (add-to-list 'org-capture-templates
+                 `("mb" "书签" entry (file ,(concat local-org-directory pes-bookmark-file-name))
+                   "* [[%^{链接}][%(pes-get-webname-by-url \"%x\") | %^{描述}]] %(org-set-tags-command)" :kill-buffer t))
+    (add-to-list 'org-agenda-custom-commands
+                 `("mb" "查看书签" search "*"
+                   ((org-agenda-files `(,(concat local-org-directory pes-bookmark-file-name))))))
+    )
+#+end_src
+
+*** COMMENT org brain
+#+begin_src elisp
+  (use-package org-brain :ensure t
+    :init
+    (setq org-brain-path "e:/Documents/org/orgBrain")
+    :config
+    (bind-key "C-c b" 'org-brain-prefix-map org-mode-map)
+    (setq org-id-track-globally t)
+    (setq org-id-locations-file "~/.emacs.d/.org-id-locations")
+    (add-hook 'before-save-hook #'org-brain-ensure-ids-in-buffer)
+    (push '("b" "Brain" plain (function org-brain-goto-end)
+            "* %i%?" :empty-lines 1)
+          org-capture-templates)
+    (setq org-brain-visualize-default-choices 'all)
+    (setq org-brain-title-max-length 12)
+    (setq org-brain-include-file-entries nil
+          org-brain-file-entries-use-title nil))
+#+end_src
+
+*** org-protocol
 #+begin_src elisp
   (with-eval-after-load 'org
-    (setq org-capture-templates
-          '(("e" "event" entry (file+headline "~/org/notes.org" "Event")
-             "* TODO %?\n%U"
-             :empty-lines 1))))
+    (require 'org-protocol))
 #+end_src
 
 ** COMMENT mu4e
@@ -1714,20 +1873,20 @@ KisjvdbXgucr5MyVaKnS+qXqfd9jUXcvUnHytjrb+VTUg3WDqXGOYn9hjVSBA0En
 *** yaml mode
 #+BEGIN_SRC elisp
   (use-package yaml-mode
-    :straight t
+
     :mode "\\yml\\'")
 #+END_SRC
 
 *** fish mode
 #+begin_src elisp
   (use-package fish-mode
-    :straight t)
+    )
 #+end_src
 
 *** json mode
 #+begin_src elisp
   (use-package json-mode
-    :straight t
+
     :mode "\\json\\'"
     :config
     (setq-local js-indent-level 2)
@@ -1740,7 +1899,7 @@ KisjvdbXgucr5MyVaKnS+qXqfd9jUXcvUnHytjrb+VTUg3WDqXGOYn9hjVSBA0En
 ** ruby mode
 #+begin_src elisp
   (use-package ruby-mode
-    :straight t
+
     :mode ("\\rb\\'" "Rakefile\\'" "Gemfile\\'" "Brewfile\\'" "Vagrantfile\\'")
     :interpreter "ruby"
     :hook
@@ -1749,7 +1908,7 @@ KisjvdbXgucr5MyVaKnS+qXqfd9jUXcvUnHytjrb+VTUg3WDqXGOYn9hjVSBA0En
 inf-ruy-mode
 #+begin_src elisp
   (use-package inf-ruby
-    :straight t
+
     :config
     (add-hook 'inf-ruby-mode-hook (lambda ()
                                (linum-mode -1))))
@@ -1757,7 +1916,7 @@ inf-ruy-mode
 *** rvm
 #+begin_src elisp
   (use-package rvm
-    :straight t
+
     :config
     (rvm-use-default)
     (setq red/rvm-PATH t))
@@ -1791,42 +1950,27 @@ inf-ruy-mode
 *** COMMENT cmake mode
 #+begin_src elisp
   (use-package cmake-mode
-    :straight t)
+    )
 #+end_src
 
 ** emacs lisp mode
 #+begin_src elisp
-  ;;(setq elisp-load-path "d:/emacs/share/emacs/26.3/lisp/progmodes")
-
   (use-package highlight-defined
-    :straight t
     :hook (emacs-lisp-mode . highlight-defined-mode))
 
-  ;; (when (directory-name-p elisp-load-path)
-  ;;   (use-package elisp-mode
-  ;;     :load-path elisp-load-path
-  ;;     :bind(:map emacs-lisp-mode-map ("DEL" . pes-smart-backspace)
-  ;;                :map lisp-interaction-mode-map ("DEL" . pes-smart-backspace))
-  ;;     :config
-  ;;     (add-hook 'emacs-lisp-mode-hook
-  ;;               #'(lambda ()
-  ;;                   (setq truncate-lines t)))))
+  (define-key emacs-lisp-mode-map (kbd "DEL") 'pes-smart-backspace)
+  (define-key lisp-interaction-mode-map (kbd "DEL") 'pes-smart-backspace)
 
-  ;; (use-package elisp-mode
-  ;;     :straight (:type build-in)
-  ;;     :bind(:map emacs-lisp-mode-map ("DEL" . pes-smart-backspace)
-  ;; 	       :map lisp-interaction-mode-map ("DEL" . pes-smart-backspace))
-  ;;     :config
-  ;;     (add-hook 'emacs-lisp-mode-hook
-  ;; 	      #'(lambda ()
-  ;; 		  (setq truncate-lines t))))
+  (add-hook 'emacs-lisp-mode-hook
+            #'(lambda ()
+                (setq truncate-lines t)))
 #+end_src
 
 ** common lisp [[https://astraybi.wordpress.com/2015/08/02/how-to-install-slimesbclquicklisp-into-emacs/][1]] [[https://common-lisp.net/project/common-lisp-beginner/][2]]
 sly
 #+begin_src elisp
   (use-package sly
-    :straight t
+
     :config
     ;;(setq inferior-lisp-program "/usr/bin/sbcl")
     (eval-after-load 'sly
@@ -1843,14 +1987,14 @@ sly
   ;;   (setq js2-basic-offset 2))
 
   (use-package tide
-    :straight t
+
     :after (company)
     :hook ((js-mode . tide-setup)
            (js-mode . tide-hl-identifier-mode)
            (before-save . tide-format-before-save)))
 
   (use-package indium
-    :straight t
+
     ;; open a local server in localhost by
     ;; @code:: python -m http.server
     ;; default port is 80000
@@ -1902,7 +2046,7 @@ sly
         nil)))
 
   (use-package web-mode
-    :straight t
+
     :mode ("\\.erb\\'" "\\.html?\\'")
     :preface
     (defun pes-web-goto-file ()
@@ -1932,7 +2076,7 @@ sly
 **** emmet mode
 #+begin_src elisp
   (use-package emmet-mode
-    :straight t
+
     :hook((css-mode . emmet-mode)
           (web-mode . emmet-mode)))
 #+end_src
