@@ -665,7 +665,6 @@ frame设置,关闭光标，菜单，工具栏，滚动条
     (global-page-break-lines-mode))
 #+END_SRC
 
-
 ** recentf
 #+BEGIN_SRC elisp
   (use-package recentf
@@ -1345,6 +1344,11 @@ add yasnippet backend to yasnippet
   (setq save-abbrevs nil)
 #+end_src
 
+* wallhaven
+#+begin_src elisp
+  (require 'wallhaven)
+#+end_src
+
 * major 配置
 ** org mode
 
@@ -1652,14 +1656,14 @@ set background of code block
     (add-to-list 'org-capture-templates
                  '("m" "persional"))
     (add-to-list 'org-capture-templates
-                 `("md" "日记本" entry (file+datetree ,(concat local-org-directory pes-diary-file-name))
-                   "* %t\n%? " :kill-buffer t))
+                 `("md" "日记本" plain (file+datetree ,(concat local-org-directory pes-diary-file-name))
+                   "%?" :kill-buffer t :unnarrowed t))
     (add-to-list 'org-capture-templates
                  `("mn" "读书笔记" plain (function pes-get-book-note)
                    "%?" :unnarrowed t :kill-buffer t))
     (add-to-list 'org-capture-templates
                  `("mb" "书签" entry (file ,(concat local-org-directory pes-bookmark-file-name))
-                   "* [[%^{链接}][%(pes-get-webname-by-url \"%x\") | %^{描述}]] %(org-set-tags-command)" :kill-buffer t))
+                   "* [[%^{链接}][%(pes-get-webname-by-url \"%x\") | %^{描述}]] %(org-set-tags-command)"  :kill-buffer t))
     (add-to-list 'org-agenda-custom-commands
                  `("mb" "查看书签" search "*"
                    ((org-agenda-files `(,(concat local-org-directory pes-bookmark-file-name))))))
@@ -2090,4 +2094,24 @@ sly
 * package provide
 #+begin_src elisp
   (provide 'dotemacs)
+#+end_src
+
+* COMMENT plain
+** quela-use-package | org pretty table
+#+begin_src elisp
+  (use-package quelpa-use-package)
+
+  (use-package org-pretty-table
+    :ensure nil
+    :quelpa (org-pretty-table :fetcher github :repo "Fuco1/org-pretty-table"))
+#+end_src
+** org-table-align
+#+begin_src elisp
+  (window-text-pixel-size (get-buffer-window) 159 160)
+
+  (org-table-beginning-of-field)
+  (org-table-end-of-field)
+  (org-table-field-info)
+  (org-table-get)
+  ;; doc:: (apropos-library "org-table")
 #+end_src
