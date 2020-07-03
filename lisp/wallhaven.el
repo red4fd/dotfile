@@ -8,9 +8,14 @@
 (require 'sgml-mode)
 
 (defvar wallhaven-cache-dir (expand-file-name "wallhaven/" user-emacs-directory))
+
 (defvar pic-html-name (expand-file-name "demo.html" wallhaven-cache-dir))
+(defvar pic-html-buffer-name "demo.html" wallhaven-cache-dir)
+
 (defvar pic-dir-filename "~/Pictures/wallhaven")
+
 (defvar pic-urls-cache-filename (expand-file-name "urls" wallhaven-cache-dir))
+(defvar pic-urls-cache-buffer-filename "urls" wallhaven-cache-dir)
 
 ;; 下载
 (defun com-pic-url (name type)
@@ -41,7 +46,7 @@
 
 (defun get-all-pic-dom ()
   "得到 li dom 集合"
-  (let* ((dom (get-dom pic-html-name))
+  (let* ((dom (get-dom pic-html-buffer-name))
 	 (pic-dom (dom-by-tag dom 'li)))
     pic-dom))
 
@@ -72,7 +77,7 @@
   "使用 emacs 下载图片 (卡死了,难受)"
   (let ((all-info (get-pics-info)))
     (dolist (element all-info)
-      (get-picture (get-pics-name (car element)) (cdr element)))))
+      (get-picture (get-sub-pics-name (car element)) (cdr element)))))
 
 (defun get-all-pic-urls (&optional filter)
   (let* ((all-info (get-pics-info))
@@ -80,7 +85,7 @@
 	  (let ((urls nil))
 	    (dolist (element all-info urls)
 	      (setq urls
-		    (cons (com-pic-url (get-pics-name (car element)) (cdr element))
+		    (cons (com-pic-url (get-sub-pics-name (car element)) (cdr element))
 			  urls)))
 	    urls)))
     all-urls))
@@ -114,7 +119,8 @@
 
 
 (defun create-urls-to-file (&optional filter)
-  (with-current-buffer (find-file pic-urls-cache-filename)
+  (find-file pic-urls-cache-filename)
+  (with-current-buffer pic-urls-cache-buffer-filename
     (kill-region (point-min) (point-max))
     (let ((all-urls (if filter
 			(apply filter (list (get-all-pic-urls)))
@@ -125,7 +131,8 @@
 
 (defun pic-update-html ()
   (interactive)
-  (with-current-buffer (find-file pic-html-name)))
+  (find-file pic-html-name)
+  (with-current-buffer pic-html-buffer-name))
 
 (defun pic-update-url ()
   (interactive)

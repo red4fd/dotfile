@@ -420,7 +420,8 @@ frame设置,关闭光标，菜单，工具栏，滚动条
       (special-mode . (:height 0.8 :v-adjust .01))
       (help-mode . (:height 0.9 :v-adjust 0.1))
       (messages-buffer-mode . (:height 0.7 :v-adjust .01))
-      (inferior-emacs-lisp-mode . (:height .9 :v-adjust .01))))
+      (inferior-emacs-lisp-mode . (:height .9 :v-adjust .01))
+      (fundamental-mode . (:height .8))))
 
   (defvar pes-mode-line-icon-ignore
     '(help-mode messages-buffer-mode Custom-mode org-agenda-mode ibuffer-mode dired-mode))
