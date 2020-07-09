@@ -41,8 +41,9 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 #+begin_src elisp
   (blink-cursor-mode -1)
   (menu-bar-mode     -1)
-  (tool-bar-mode     -1)
-  (scroll-bar-mode   -1)
+  (when (display-graphic-p)
+    (tool-bar-mode     -1)
+    (scroll-bar-mode   -1))
 #+end_src
 打开成对的显示括号
 #+begin_src elisp
@@ -136,7 +137,8 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 
 *** margins
 #+begin_src elisp
-  (fringe-mode '(1 . 2))
+  (when (display-graphic-p)
+    (fringe-mode '(1 . 2)))
 
   (defun pes-margin-add ()
     ""
