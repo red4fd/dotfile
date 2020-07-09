@@ -547,7 +547,8 @@ frame设置,关闭光标，菜单，工具栏，滚动条
                         mode-line-frame-identification
                         ;; mode-line-buffer-identification
                         ;; mode-line-icon
-                        '(:eval (propertize (pes-mode-line-icon-get-icon)))
+                        '(:eval (when (display-graphic-p)
+                                  (propertize (pes-mode-line-icon-get-icon))))
                                 ;; buffer-name
                         '(:eval (propertize "%b" 'face '((:foreground "#F09027" :weight bold))))
                         "  "
@@ -2086,6 +2087,12 @@ sly
           (web-mode . emmet-mode)))
 #+end_src
 
+** python
+#+begin_src elisp
+  (use-package elpy
+    :ensure t
+    :hook (python-mode . elpy-enable))
+#+end_src
 * load custom
 #+begin_src elisp
   (when (file-exists-p custom-file)
