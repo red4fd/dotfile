@@ -187,6 +187,14 @@ frame设置,关闭光标，菜单，工具栏，滚动条
     (package-refresh-contents))
   (require 'use-package)
 
+  (use-package quelpa
+    :config
+    (setq quelpa-checkout-melpa-p nil
+        quelpa-update-melpa-p nil
+        quelpa-melpa-recipe-stores nil
+        quelpa-self-upgrade-p nil))
+  (use-package quelpa-use-package)
+
   (setq use-package-always-ensure t)
 #+end_src
 *** COMMENT 使用 straight [[https://www.ioiox.com/archives/62.html][1]]
@@ -549,9 +557,10 @@ frame设置,关闭光标，菜单，工具栏，滚动条
                         mode-line-frame-identification
                         ;; mode-line-buffer-identification
                         ;; mode-line-icon
-                        '(:eval (when (display-graphic-p)
-                                  (propertize (pes-mode-line-icon-get-icon))))
-                                ;; buffer-name
+                        ;; '(:eval (when (display-graphic-p)
+                        ;;           (propertize (pes-mode-line-icon-get-icon))))
+
+                        ;; buffer-name
                         '(:eval (propertize "%b" 'face '((:foreground "#F09027" :weight bold))))
                         "  "
                         ;;mode-line-position
@@ -824,6 +833,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
     ;;  (setq ivy-use-virtual-buffers t)
     (define-key read-expression-map (kbd "C-r") 'counsel-expression-history)
     (setq ivy-count-format "")
+    (setq ivy-height 20)
     (setq ivy-format-functions-alist '((t . ivy-format-function-pretty))))
 #+END_SRC
 
@@ -835,8 +845,8 @@ frame设置,关闭光标，菜单，工具栏，滚动条
     (setq ivy-posframe-display-functions-alist
           '((swiper          . nil)
             (complete-symbol . ivy-posframe-display-at-point)
-            (counsel-M-x     . ivy-posframe-display-at-frame-center)
-            (t               . ivy-posframe-display-at-frame-center)
+            (counsel-M-x     . ivy-posframe-display-at-frame-top-center)
+            (t               . ivy-posframe-display-at-frame-top-center)
             (counsel-ag      . nil)))
     (ivy-posframe-mode 1))
 #+end_src
@@ -1699,6 +1709,15 @@ set background of code block
     (require 'org-protocol))
 #+end_src
 
+*** valign
+#+begin_src elisp
+  (use-package valign
+    :quelpa (valign :fetcher github :repo "casouri/valign")
+    :ensure t
+    :config
+    (add-hook 'org-mode-hook #'valign-mode))
+#+end_src
+
 ** COMMENT mu4e
 参考 [[https://www.junahan.com/post/emacs-mu4e/][1]]
 *** 安装软件
@@ -2107,6 +2126,7 @@ sly
 #+end_src
 
 * COMMENT plain
+** org roam
 ** quela-use-package | org pretty table
 #+begin_src elisp
   (use-package quelpa-use-package)
@@ -2116,6 +2136,7 @@ sly
     :quelpa (org-pretty-table :fetcher github :repo "Fuco1/org-pretty-table"))
 #+end_src
 ** org-table-align
+这个想法被 [[https://github.com/casouri/valign][valign]] 实现了
 #+begin_src elisp
   (window-text-pixel-size (get-buffer-window) 159 160)
 
