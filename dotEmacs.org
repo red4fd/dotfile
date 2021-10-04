@@ -1,5 +1,6 @@
 
 #+title: emacs 配置org文件
+#+STARTUP: fold
 #+STARTUP: hideblocks
 #+PROPERTY:    header-args:elisp  :tangle ~/.emacs.d/lisp/dotemacs.el
 # interesting ibuffer straight
@@ -71,7 +72,15 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 #+end_src
 
 ** 编码
-*** unix
+可以查看[[https://github.com/hick/emacs-chinese][这里]]进行编码的设置
+*** 自动检测编码
+[[https://www.cnblogs.com/codeblock/p/4742110.html][参考]]
+#+begin_src elisp
+  (use-package unicad
+    :config
+    (unicad-mode))
+#+end_src
+*** COMMENT unix
 #+begin_src elisp
   (unless (string-equal system-type "windows-nt")
     (set-charset-priority 'unicode)
@@ -83,7 +92,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
     (setq default-process-coding-system '(utf-8-unix . utf-8-unix)))
 #+end_src
 
-*** windows
+*** COMMENT windows
 [[https://www.zhihu.com/question/35148860][中文粘贴乱码解决]]
 [[https://blog.csdn.net/weixin_33961829/article/details/94032759][中文路径识别解决]]
 #+begin_src elisp
@@ -135,23 +144,30 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 #+end_src
 将字体设置成为以上的大小，在org表格中显示会出现不对齐的现象，但是整体看起来更和谐一些,如果将中文字体设置为 22，表格中显示会对齐但是，整体上中文字体会过于庞大
 
-*** margins
+*** COMMENT margins
 #+begin_src elisp
   (when (display-graphic-p)
-    (fringe-mode '(1 . 2)))
+    (fringe-mode '(0 . 8)))
 
-  (defun pes-margin-add ()
-    ""
-    (unless (bound-and-true-p linum-mode)
-      (set-window-margins (car (get-buffer-window-list (current-buffer) nil t)) 5)))
+  ;; (defun pes-margin-add ()
+  ;;   ""
+  ;;   (unless (bound-and-true-p linum-mode)
+  ;;     (set-window-margins (car (get-buffer-window-list (current-buffer) nil t)) 5)))
 
-  (pes-margin-add)
+  ;; (pes-margin-add)
 
-  (add-hook 'window-configuration-change-hook
-            #'(lambda ()
-                (unless (or (string-match "company-box" (buffer-name))
-                            (string-match "Ilist" (buffer-name)))
-                  (pes-margin-add))))
+  ;; (add-hook 'window-configuration-change-hook
+  ;;           #'(lambda ()
+  ;;               (unless (or (string-match "company-box" (buffer-name))
+  ;;                           (string-match "Ilist" (buffer-name))
+  ;;                           (if (and (featurep writeroom-mode)
+  ;;                                    writeroom-mode)
+  ;;                               t)
+  ;;                           )
+  ;;                 (pes-margin-add))))
+
+  (setq-default left-margin-width 5)
+  (set-window-buffer nil (current-buffer))
 #+end_src
 
 * 包管理
@@ -160,17 +176,17 @@ frame设置,关闭光标，菜单，工具栏，滚动条
   (when (string-equal system-type "windows-nt")
     (setq windows-emacs-install "d:/emacs/")
     (setq ssl-trustfiles (list "ssl/cret.pem"
-			       "ssl/openssl.cnf"
-			       "ssl/certs/ca-bundle.crt"
-			       "ssl/certs/ca-bundle.trust.crt"
-			       "etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt"
-			       "etc/pki/ca-trust/extracted/pem/email-ca-bundle.pem"
-			       "etc/pki/ca-trust/extracted/pem/objsign-ca-bundle.pem"
-			       "etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"))
+                               "ssl/openssl.cnf"
+                               "ssl/certs/ca-bundle.crt"
+                               "ssl/certs/ca-bundle.trust.crt"
+                               "etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt"
+                               "etc/pki/ca-trust/extracted/pem/email-ca-bundle.pem"
+                               "etc/pki/ca-trust/extracted/pem/objsign-ca-bundle.pem"
+                               "etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"))
     (setq gnutls-trustfiles nil)
     (mapc (lambda (crt)
-	    (add-to-list 'gnutls-trustfiles (concat windows-emacs-install crt)))
-	  ssl-trustfiles))
+            (add-to-list 'gnutls-trustfiles (concat windows-emacs-install crt)))
+          ssl-trustfiles))
 #+end_src
 ** package manager
 *** 设置package的源，这里选择[[https://elpa.emacs-china.org][emacs-china]]的melpa镜像地址
@@ -277,6 +293,8 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 #+end_src
 
 ** pes doc handler
+
+当输入 =;;;= 时按下回车之后可以打开文档编辑模式，适用于 =C-like= 语言
 #+begin_src elisp
   (defvar pes-clike-doc-handler-mode nil
     "`t' : open c-like-doc mode
@@ -302,6 +320,9 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 #+end_src
 
 ** pes css handler
+
+自动添加分隔符，在 =CSS-mode=
+
 #+begin_src elisp
   (defvar pes-css-after-ccfh-switch nil
     "doc string")
@@ -522,7 +543,46 @@ frame设置,关闭光标，菜单，工具栏，滚动条
         )))
 #+end_src
 
-* 视觉效果
+** read only mode                                                :bulid:in:
+在浏览 =package 文件时= 打开 =view-mode=
+just a library
+#+begin_src elisp
+  (defvar pes-autoro-path-regexp
+    nil
+    "打开只读模式文件路径或文件名的 regexp")
+
+  (defun pes-autoro-filename-match (matcher)
+    " `match' 是否在 `pes-autoro-path-regexp' 包含的范围"
+    (when (and matcher
+               pes-autoro-path-regexp
+               (listp pes-autoro-path-regexp))
+      (catch 'result
+        (mapcar (lambda (element)
+                  (let ((regexp element))
+                    (when (string-match-p regexp matcher)
+                      (throw 'result t))))
+                pes-autoro-path-regexp)
+        nil)
+      ))
+
+  (defun pes-autoro-func ()
+    "自动打开 `read-only-mode' 的函数
+  如果打开文件全部路径可以被 `pes-autoro-path-regexp' 匹配则打开 `read-only-mode'"
+    (when (pes-autoro-filename-match buffer-file-name)
+      (view-mode t)))
+#+end_src
+
+conf
+#+begin_src elisp
+  (setq pes-autoro-path-regexp
+        '("elpa/"
+          "share/emacs/"))
+  (add-hook 'after-init-hook #'(lambda ()
+                                 (add-hook 'find-file-hook #'pes-autoro-func)))
+
+#+end_src
+
+* view
 ** 主题设置
 #+begin_src elisp
   (use-package zenburn-theme
@@ -535,24 +595,16 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 #+end_src
 
 ** mode line
+*** default modeline
 #+begin_src elisp
-  (defvar pes-test nil)
+  (defface mode-lien-default-face
+    '((((class color) (background light)) :foreground "light gray")
+      (((class color) (background  dark)) :foreground "dim gray"))
+    "Face for secondary part in eshell git prompt theme `multiline`. e.g. separator, horizontal line, date."
+    :group 'modeline-faces)
 
-  (use-package mini-modeline
-
-    :preface
-    (defface pes-mini-hide-modeline-line
-      '((((background light))
-         :backgorund "#D3D3D3" :height 0.1 :box nil)
-        (t
-         :backgorund "#D3D3D3" :height 0.1 :box nil))
-      "Modeline face for inactive window.")
-    :custom-face
-    (mini-modeline-mode-line ((t (:inherit 'pes-mini-hide-modeline-line))))
-    (mini-modeline-mode-line-inactive ((t (:inherit 'pes-mini-hide-modeline-line))))
-    :config
-    (setq-default mini-modeline-right-padding 0.1)
-    (setq-default mini-modeline-r-format
+  (defun pes-set-mode-line-format ()
+    (setq-default mode-line-format
                   (list "%e"
                         mode-line-frame-identification
                         ;; mode-line-buffer-identification
@@ -561,16 +613,25 @@ frame设置,关闭光标，菜单，工具栏，滚动条
                         ;;           (propertize (pes-mode-line-icon-get-icon))))
 
                         ;; buffer-name
-                        '(:eval (propertize "%b" 'face '((:foreground "#F09027" :weight bold))))
-                        "  "
+                        ;; '(:eval (propertize "%b" 'face '((:foreground "#F09027" :weight bold))))
+                        (propertize "%b" 'face '((:foreground "#F09027" :weight bold)))
                         ;;mode-line-position
                         ;; ((:propertize mode-line-percent-position )
-                        ;;  (line-number-mode))
-                        (propertize "%p" 'face '((:foreground "#EA9085")))
+                        ;;  (line-number-mode)) "dim gray"
+                        ;; (propertize "%p" 'face `((:foreground ,(face-attribute 'highlight :background))))
+                        (propertize " | " 'face 'mode-lien-default-face)
+                        (propertize "%p" 'face 'mode-lien-default-face)
+                        (propertize " | " 'face 'mode-lien-default-face)
+                        (propertize "%l" 'face 'mode-lien-default-face)
                         " "
-                        (propertize "%l" 'face 'font-lock-type-face)
-
-                        '(vc-mode vc-mode)
+                        ;; '(vc-mode vc-mode)
+                        '(:eval (let ((branch (when vc-mode
+                                                (mapconcat 'concat (cdr (split-string vc-mode "[:-]")) "-"))))
+                                  (when branch
+                                    (concat (propertize "| " 'face 'mode-lien-default-face)
+                                            branch
+                                            " "))
+                                  ))
 
                         '(:eval (let* ((sum 0)
                                        (sum (if (buffer-modified-p) (+ sum 1) sum))
@@ -579,37 +640,36 @@ frame设置,关闭光标，菜单，工具栏，滚动条
                                                         'face '((:inherit font-lock-warning-face
                                                                           :box (:line-width -1 :style released-button)))))
                                        (brs (propertize "RO"
-                                                        'face '((:inherit font-lock-type-face
+                                                        'face '((:inherit font-lock-warning-face
                                                                           :box (:line-width 1 :style pressed-button))))))
-                                  (setq pes-test (cons sum bms))
                                   (cond
-                                   ((= sum 1) (concat "  [" bms "]"))
-                                   ((= sum 2) (concat "  [" brs "]"))
-                                   ((= sum 3) (concat "  [" bms "," brs "]"))
-                                   (t " "))))
+                                   ((= sum 1) (concat " [" bms "] "))
+                                   ((= sum 2) (concat " [" brs "] "))
+                                   ((= sum 3) (concat " [" bms "," brs "] "))
+                                   (t ""))))
                         ;; mode-line-misc-info
-                        " "
-                        ))
-    (setq mini-modeline-enhance-visual nil
-          mini-modeline-echo-duration 2
-          mini-modeline-update-interval 0.3)
+                        )))
+#+end_src
+
+*** mini-modeline
+#+begin_src elisp
+  (use-package mini-modeline
+    :quelpa (mini-modeline :repo "kiennq/emacs-mini-modeline" :fetcher github)
+    :config
+    (pes-set-mode-line-format)
+    (setq mini-modeline-right-padding 1)
+    (setq-default mini-modeline-r-format (pes-set-mode-line-format))
+    ;; (setq mini-modeline-display-gui-line nil)
+    ;; http://ergoemacs.org/emacs/elisp_define_face.html
+    (face-spec-set
+     'mini-modeline-mode-line
+     ;; the value of below equal `mini-modeline-mode-line-inactive'
+     '((((background light))
+        :background "#dddddd" :height 0.1 :box nil)
+       (t
+        :background "#333333" :height 0.1 :box nil))
+     'face-defface-spec)
     (mini-modeline-mode t))
-
-  ;; (defface pes-mini-hide-modeline-line
-  ;;   '((t :inherit default :height 0.15 :box nil))
-  ;;   "Modeline face for inactive window.")
-
-
-
-  ;; (when (display-graphic-p)
-  ;;   (setf (alist-get 'mode-line face-remapping-alist)
-  ;;         'pes-mini-hide-modeline-line)
-  ;;   (setf (alist-get 'mode-line-inactive face-remapping-alist)
-  ;;         'pes-mini-hide-modeline-line))
-
-  ;; (custom-set-faces
-  ;;  '(mini-modeline-mode-line ((t (:inherit 'pes-mini-hide-modeline-line))))
-  ;;  '(mini-modeline-mode-line-inactive ((t (:inherit 'pes-mini-hide-modeline-line)))))
 #+end_src
 
 ** dimmer
@@ -627,19 +687,16 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 
 * 全局 packages 配置
 *** 快捷键
-| keyboard | command                  |
-|----------+--------------------------|
-| C-c g    | avy-goto-word-1          |
-
-| C-=      | expand refion            |
-
-| C-M-j    | output just you input    |
-
-| C-c C-s  | mc/edit-line             |
-| C->      | mc/mark-next-like-this   |
-| C->      | mc/previous-like-this    |
-| C-c C->  | mc/mark-all-like-this    |
-| C-q C-l  | page line                |
+| keyboard | command                |
+|----------+------------------------|
+| C-c g    | avy-goto-word-1        |
+| C-=      | expand refion          |
+| C-M-j    | output just you input  |
+| C-c C-s  | mc/edit-line           |
+| C->      | mc/mark-next-like-this |
+| C->      | mc/previous-like-this  |
+| C-c C->  | mc/mark-all-like-this  |
+| C-q C-l  | page line              |
 ** avy
 在org-mode 中有冲突
 #+begin_src elisp
@@ -731,6 +788,9 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 ** writeroom-mode
 #+begin_src elisp
   (use-package writeroom-mode
+    :config
+    (setq writeroom-fullscreen-effect 'maximized)
+    (setq writeroom-major-modes '(org-mode))
     )
 #+end_src
 
@@ -782,14 +842,22 @@ frame设置,关闭光标，菜单，工具栏，滚动条
     :config
     (setq ibuffer-saved-filter-groups
           '(("default"
-             ("js" (mode . js-mode))
-             ("html" (or (mode . web-mode)
-                         (mode . html-mode)))
-             ("css" (or (mode . css-mode)
-                        (mode . scss-mode)))
-             ("conf" (filename . "dotfile"))
-             ("package" (filename . "elpa"))
-             ("draft" (name . "\*scratch\*")))))
+             ("FU file" (or (mode . org-mode)
+                          (mode . emacs-lisp-mode)))
+             ("Emacs file" (or (name . "\*scratch\*")
+                               (name . "^\\*Messages\\*$")))
+             ("Directory" (mode . dired-mode))
+             ("Programm file" (or (mode . c-mode)
+                                  (mode . c++-mode)
+                                  (mode . java-mode)
+                                  (mode . csharp-mode)))
+             ("Web file" (or (mode . web-mode)
+                             (mode . html-mode)
+                             (mode . js-mode)
+                             (mode . css-mode)
+                             (mode . scss-mode)))
+             ("Conf file" (filename . "dotfile"))
+             ("Elpa package" (filename . "elpa")))))
     (add-hook 'ibuffer-mode-hook
               #'(lambda ()
                   (ibuffer-auto-mode 1)
@@ -837,7 +905,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
     (setq ivy-format-functions-alist '((t . ivy-format-function-pretty))))
 #+END_SRC
 
-** ivy-posframe
+** COMMENT ivy-posframe
 #+begin_src elisp
   (use-package ivy-posframe
 
@@ -878,6 +946,11 @@ frame设置,关闭光标，菜单，工具栏，滚动条
 if you want use =counsel-ag=,you need to install it in your computer
 #+begin_src sh :dir "/sudo::"
   sudo pacman -S the_silver_searcher
+#+end_src
+
+在 windows 下还是使用 =counsel-rg=,ag 编码问题解决不了，rg[[https://emacs-china.org/t/counsel-rg-win10/12474/10][参考]]
+#+begin_src elisp
+  (add-to-list 'process-coding-system-alist '("rg" utf-8 . gbk))
 #+end_src
 
 ** COMMENT dired +
@@ -930,11 +1003,16 @@ if you want use =counsel-ag=,you need to install it in your computer
 ** projectile
 #+BEGIN_SRC elisp
   (use-package projectile
-
     :config
     (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
     (setq projectile-completion-system 'ivy)
     (projectile-mode +1))
+
+  (with-eval-after-load 'projectile
+    (projectile-register-project-type 'csharp-console '("obj/project.assets.json")
+                                      :compile "dotnet buile"
+                                      :test "dotnet run"
+                                      :run "dotnet run"))
 #+END_SRC
 
 ** counsel-projectile
@@ -959,7 +1037,7 @@ if you want use =counsel-ag=,you need to install it in your computer
     (setq linum-format " %3d "))
 #+end_src
 
-** fill-column-indicator
+** COMMENT fill-column-indicator
 #+begin_src elisp
   (use-package fill-column-indicator
     )
@@ -1669,6 +1747,7 @@ set background of code block
     ;;; 自己的 capture
     (add-to-list 'org-capture-templates
                  '("m" "persional"))
+    ;; 取消  :unnarrowed t
     (add-to-list 'org-capture-templates
                  `("md" "日记本" plain (file+datetree ,(concat local-org-directory pes-diary-file-name))
                    "%?" :kill-buffer t :unnarrowed t))
@@ -2113,6 +2192,131 @@ sly
   (use-package elpy
     :ensure t
     :hook (python-mode . elpy-enable))
+#+end_src
+** eshell
+
+set eshell theme
+#+begin_src elisp
+  ;; (use-package eshell-git-prompt
+  ;;  :after eshell)
+  (with-eval-after-load 'eshell
+
+    (defmacro with-face (str &rest properties)
+      "Add face PROPERTIES to STR."
+      (declare (indent 1))
+      `(propertize ,str 'face (list ,@properties)))
+
+    (defface eshell-git-prompt-multiline-secondary-face
+      '((((class color) (background light)) :foreground "light gray")
+        (((class color) (background  dark)) :foreground "dim gray"))
+      "Face for secondary part in eshell git prompt theme `multiline`. e.g. separator, horizontal line, date."
+      :group 'eshell-faces)
+
+    (defface eshell-git-prompt-multiline-command-face
+      '((((class color) (background light)) :foreground "slate blue")
+        (((class color) (background  dark)) :foreground "gold"))
+      "Face for command user typed in eshell git prompt theme `multiline`."
+      :group 'eshell-faces)
+
+    (defface eshell-git-prompt-multiline-sign-face
+      '((t :foreground "deep pink"))
+      "Face for prompt sign in eshell git prompt theme `multiline`."
+      :group 'eshell-faces)
+
+    (defun fish-path (path max-len)
+    "Return a potentially trimmed-down version of the directory PATH, replacing
+  parent directories with their initial characters to try to get the character
+  length of PATH (sans directory slashes) down to MAX-LEN."
+    (let* ((components (split-string (abbreviate-file-name path) "/"))
+           (len (+ (1- (length components))
+                   (cl-reduce '+ components :key 'length)))
+           (str ""))
+      (while (and (> len max-len)
+                  (cdr components))
+        (setq str (concat str
+                          (cond ((= 0 (length (car components))) "/")
+                                ((= 1 (length (car components)))
+                                 (concat (car components) "/"))
+                                (t
+                                 (if (string= "."
+                                              (string (elt (car components) 0)))
+                                     (concat (substring (car components) 0 2)
+                                             "/")
+                                   (string (elt (car components) 0) ?/)))))
+              len (- len (1- (length (car components))))
+              components (cdr components)))
+      (concat str (cl-reduce (lambda (a b) (concat a "/" b)) components))))
+
+    (defun eshell-prompt-multiline ()
+      "Eshell Git prompt inspired by spaceship-prompt."
+      (let (separator hr dir time sign command)
+        ;;(setq separator (with-face " | " 'eshell-git-prompt-multiline-secondary-face))
+        (setq separator (with-face "  " 'eshell-git-prompt-multiline-secondary-face))
+        ;;(setq hr (with-face (concat (make-string (window-total-width) ?─) "\n") 'eshell-git-prompt-multiline-secondary-face))
+        (setq hr "")
+        (setq time (with-face (format-time-string "%H:%M:%S") 'eshell-git-prompt-multiline-secondary-face))
+        (setq dir
+              (fish-path (abbreviate-file-name (eshell/pwd)) (* (/ (window-total-width) 3) 2)))
+        (setq sign
+              (if (= (user-uid) 0)
+                  (with-face "\n#" 'eshell-git-prompt-multiline-sign-face)
+                (with-face "\nλ" 'eshell-git-prompt-multiline-sign-face)))
+        (setq command (with-face " " 'eshell-git-prompt-multiline-command-face))
+
+        ;; Build prompt
+        (concat hr dir separator time sign command)))
+
+    (defconst eshell-prompt-multiline-regexp "^[^$\n]*λ ")
+
+    (setq eshell-prompt-function 'eshell-prompt-multiline
+          eshell-prompt-regexp eshell-prompt-multiline-regexp)
+    )
+#+end_src
+
+some eshell conf
+#+begin_src elisp
+  (with-eval-after-load 'eshell
+    (setq eshell-scroll-to-bottom-on-input t)
+    )
+
+  ;; (defun eshell-toggle ()
+  ;;   "Opens up a new shell in the directory associated with the
+  ;;     current buffer's file. The eshell is renamed to match that
+  ;;     directory to make multiple eshell windows easier."
+  ;;   (interactive)
+  ;;   (let* ((height (/ (window-total-height) 3)))
+  ;;     (split-window-vertically (- height))
+  ;;     (other-window 1)
+  ;;     (eshell "new")
+  ;;     (insert (concat "ls"))
+  ;;     (eshell-send-input)))
+
+  ;; (bind-key "C-`" 'eshell-toggle)
+
+  (use-package eshell-toggle
+    :custom
+    (eshell-toggle-size-fraction 2)
+    (eshell-toggle-use-projectile-root t)
+    (eshell-toggle-run-command "clear 1")
+    ;;(eshell-toggle-init-function #'eshell-toggle-init-ansi-term)
+    :quelpa
+    (eshell-toggle :repo "4DA/eshell-toggle" :fetcher github :version original)
+    :bind
+    ("C-`" . eshell-toggle))
+#+end_src
+
+c#
+
+*** TODO some eshell skills
+- [[http://www.howardism.org/Technical/Emacs/eshell-fun.html][eshell-fun]]
+
+** c#
+#+begin_src elisp
+  ;; (use-package tree-sitter :ensure t)
+  ;; (use-package tree-sitter-langs :ensure t)
+
+  (use-package csharp-mode
+    :ensure t)
 #+end_src
 * load custom
 #+begin_src elisp
