@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: console.WriteLine
+# key: cwl
+# --
+Console.WriteLine(${1:string});

@@ -254,6 +254,7 @@ frame设置,关闭光标，菜单，工具栏，滚动条
   (use-package dash
     )
 #+END_SRC
+
 * Red's function
 ** emacs system
 *** personal emacs system root directory
@@ -584,6 +585,7 @@ conf
 
 * view
 ** 主题设置
+*** zenburn theme
 #+begin_src elisp
   (use-package zenburn-theme
 
@@ -592,6 +594,12 @@ conf
     (setq zenburn-scale-org-headlines t)
     (setq zenburn-scale-outline-headlines t)
     (load-theme 'zenburn t))
+#+end_src
+*** COMMENT gruvbox theme
+#+begin_src elisp
+  (use-package gruvbox-theme
+    :config
+    (load-theme 'gruvbox-light-hard t))
 #+end_src
 
 ** mode line
@@ -802,7 +810,7 @@ conf
     (smartparens-global-mode t)
     (require 'smartparens-config))
 
-  (sp-with-modes '(js-mode css-mode c-mode c++-mode)
+  (sp-with-modes '(js-mode css-mode c-mode c++-mode csharp-mode)
     (sp-local-pair "{" nil :post-handlers '(("||\n[i]" "RET")))
     (sp-local-pair "/**" "*/" :post-handlers '((" | " "SPC")
                                                ("||[i]\n[i]" "RET"))))
@@ -2035,8 +2043,14 @@ inf-ruy-mode
     :bind(:map c-mode-base-map
                ("DEL" . pes-smart-backspace))
     :config
-    (setq c-default-style "linux") ;; set style to "linux"
-    (setq c-basic-offset 4))
+    (add-hook 'c-mode-hook
+              (lambda ()
+                (set (make-local-variable 'c-default-style) "linux")
+                (set (make-local-variable 'c-basic-offset) 4))
+              )
+    ;; (setq c-default-style "linux") ;; set style to "linux"
+    ;; (setq c-basic-offset 4)
+    )
 #+end_src
 
 *** gdb
@@ -2310,13 +2324,18 @@ c#
 *** TODO some eshell skills
 - [[http://www.howardism.org/Technical/Emacs/eshell-fun.html][eshell-fun]]
 
-** c#
+** csharp
 #+begin_src elisp
   ;; (use-package tree-sitter :ensure t)
   ;; (use-package tree-sitter-langs :ensure t)
 
   (use-package csharp-mode
-    :ensure t)
+    :ensure t
+    :config
+    (add-hook 'csharp-mode-hook
+              (lambda ()
+                (set (make-local-variable 'c-default-style) "csharp")
+                (set (make-local-variable 'c-basic-offset) 4))))
 #+end_src
 * load custom
 #+begin_src elisp

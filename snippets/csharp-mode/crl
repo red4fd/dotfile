@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: console.ReadLine();
+# key: crl
+# --
+Console.ReadLine();$0
